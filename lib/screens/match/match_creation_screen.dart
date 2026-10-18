@@ -979,7 +979,22 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                 color: isSel ? _getSportAccentColor() : const Color(0xFFE2E8F0),
               ),
               onSelected: (val) {
-                if (val) setState(() => _selectedFormat = fmt);
+                if (val) {
+                  setState(() {
+                    _selectedFormat = fmt;
+                    if (_selectedSport == SportType.cricket) {
+                      if (fmt.contains('20 Overs')) {
+                        _customOversOrMinutes = 20;
+                      } else if (fmt.contains('10-Over')) {
+                        _customOversOrMinutes = 10;
+                      } else if (fmt.contains('50 Overs')) {
+                        _customOversOrMinutes = 50;
+                      } else if (fmt.contains('6-Over')) {
+                        _customOversOrMinutes = 6;
+                      }
+                    }
+                  });
+                }
               },
             );
           }).toList(),

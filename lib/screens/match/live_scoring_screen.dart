@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -48,6 +49,53 @@ class CricketBowlingRecord {
   double get economy => balls > 0 ? (runs / (balls / 6.0)) : 0.0;
 }
 
+/// Innings dataset for Stumps-style multi-innings scorecard
+class CricketInningsData {
+  final int inningsNumber;
+  final String battingTeamName;
+  final String battingTeamShort;
+  final String bowlingTeamName;
+  final String bowlingTeamShort;
+  int runs;
+  int wickets;
+  int balls;
+  int extrasWides;
+  int extrasNoBalls;
+  int extrasByes;
+  int extrasLegByes;
+  final Map<String, CricketBattingRecord> battingRecords;
+  final Map<String, CricketBowlingRecord> bowlingRecords;
+  final List<String> fallOfWickets;
+  bool isCompleted;
+  String? completionReason;
+
+  CricketInningsData({
+    required this.inningsNumber,
+    required this.battingTeamName,
+    required this.battingTeamShort,
+    required this.bowlingTeamName,
+    required this.bowlingTeamShort,
+    this.runs = 0,
+    this.wickets = 0,
+    this.balls = 0,
+    this.extrasWides = 0,
+    this.extrasNoBalls = 0,
+    this.extrasByes = 0,
+    this.extrasLegByes = 0,
+    Map<String, CricketBattingRecord>? battingRecords,
+    Map<String, CricketBowlingRecord>? bowlingRecords,
+    List<String>? fallOfWickets,
+    this.isCompleted = false,
+    this.completionReason,
+  })  : battingRecords = battingRecords ?? {},
+        bowlingRecords = bowlingRecords ?? {},
+        fallOfWickets = fallOfWickets ?? [];
+
+  int get totalExtras => extrasWides + extrasNoBalls + extrasByes + extrasLegByes;
+  String get oversStr => '${balls ~/ 6}.${balls % 6}';
+  double get runRate => balls > 0 ? (runs / (balls / 6.0)) : 0.0;
+}
+
 class MatchTimelineItem {
   final String timeOrOver;
   final String title;
@@ -95,6 +143,23 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
   int _team1FinalWickets = 0;
   String _team1FinalOvers = '0.0';
 
+  // Multi-Innings Scorecard Data (Stumps-Style)
+  late CricketInningsData _innings1;
+  late CricketInningsData _innings2;
+  int _selectedScorecardInnings = 1;
+  int _maxOvers = 20;
+  int _maxWickets = 10;
+  bool _isCricketInningsOver = false;
+  bool _isMatchAbandoned = false;
+  String? _abandonReason;
+
+  CricketInningsData get _currentInningsData => _cricketInnings == 1 ? _innings1 : _innings2;
+  Map<String, CricketBattingRecord> get _battingRecords => _currentInningsData.battingRecords;
+  Map<String, CricketBowlingRecord> get _bowlingRecords => _currentInningsData.bowlingRecords;
+  List<String> get _fallOfWickets => _currentInningsData.fallOfWickets;
+
+  bool get _isTestCricket => _match.format.toLowerCase().contains('test');
+
   // Active Batsmen & Bowler
   late MatchPlayer _striker;
   late MatchPlayer _nonStriker;
@@ -107,11 +172,6 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
   int _bowlerRuns = 0;
   int _bowlerBalls = 0;
   int _bowlerWickets = 0;
-
-  // Detailed Cricket Records
-  final Map<String, CricketBattingRecord> _battingRecords = {};
-  final Map<String, CricketBowlingRecord> _bowlingRecords = {};
-  final List<String> _fallOfWickets = [];
 
   // Timeline / Commentary Log
   final List<MatchTimelineItem> _timelineFeed = [];
@@ -176,6 +236,62 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
 
     // Parse pre-existing score data if any (e.g. from mock matches)
     if (_match.sport == SportType.cricket) {
+      int parsedOvers = 20;
+      if (_match.scoreData is Map && (_match.scoreData as Map)['overs_limit'] != null) {
+        final ol = (_match.scoreData as Map)['overs_limit'];
+        if (ol is int && ol > 0) {
+          parsedOvers = ol;
+        } else if (ol is String) {
+          parsedOvers = int.tryParse(ol) ?? 20;
+        }
+      } else {
+        final regex = RegExp(r'(\d+)\s*(?:overs|over|-over|ov)', caseSensitive: false);
+        final match = regex.firstMatch(_match.format);
+        if (match != null) {
+          parsedOvers = int.tryParse(match.group(1)!) ?? 20;
+        }
+      }
+      _maxOvers = parsedOvers;
+      _maxWickets = t1.isNotEmpty ? math.min(10, math.max(1, t1.length - 1)) : 10;
+
+      _innings1 = CricketInningsData(
+        inningsNumber: 1,
+        battingTeamName: _match.team1Name,
+        battingTeamShort: _match.team1Short,
+        bowlingTeamName: _match.team2Name,
+        bowlingTeamShort: _match.team2Short,
+      );
+
+      _innings2 = CricketInningsData(
+        inningsNumber: 2,
+        battingTeamName: _match.team2Name,
+        battingTeamShort: _match.team2Short,
+        bowlingTeamName: _match.team1Name,
+        bowlingTeamShort: _match.team1Short,
+      );
+
+      // Pre-fill Innings 2 provisional squads
+      for (final p in t2) {
+        _innings2.battingRecords[p.id] = CricketBattingRecord(
+          player: p,
+          runs: 0,
+          balls: 0,
+          fours: 0,
+          sixes: 0,
+          isOut: false,
+          dismissal: 'yet to bat',
+        );
+      }
+      for (final p in t1) {
+        _innings2.bowlingRecords[p.id] = CricketBowlingRecord(
+          player: p,
+          balls: 0,
+          runs: 0,
+          wickets: 0,
+          maidens: 0,
+        );
+      }
+
       if (isDemoMatch && _match.scoreData is Map) {
         final sd = _match.scoreData as Map;
         if (sd['team1_score'] != null) {
@@ -200,7 +316,7 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
         _bowlerWickets = 1;
 
         for (final p in t1) {
-          _battingRecords[p.id] = CricketBattingRecord(
+          _innings1.battingRecords[p.id] = CricketBattingRecord(
             player: p,
             runs: p.id == _striker.id ? _strikerRuns : (p.id == _nonStriker.id ? _nonStrikerRuns : (p.id == 'c7' ? 24 : 0)),
             balls: p.id == _striker.id ? _strikerBalls : (p.id == _nonStriker.id ? _nonStrikerBalls : (p.id == 'c7' ? 14 : 0)),
@@ -211,7 +327,7 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
           );
         }
         for (final p in t2) {
-          _bowlingRecords[p.id] = CricketBowlingRecord(
+          _innings1.bowlingRecords[p.id] = CricketBowlingRecord(
             player: p,
             balls: p.id == _currentBowler.id ? _bowlerBalls : 18,
             runs: p.id == _currentBowler.id ? _bowlerRuns : 22,
@@ -220,7 +336,11 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
           );
         }
 
-        _fallOfWickets.addAll([
+        _innings1.runs = _cricketRuns;
+        _innings1.wickets = _cricketWickets;
+        _innings1.balls = _cricketBalls;
+
+        _innings1.fallOfWickets.addAll([
           '1-34 (Shubman Gill, 3.4 ov)',
           '2-78 (Virat Kohli, 8.5 ov)',
           '3-142 (Suryakumar Yadav, 14.1 ov)',
@@ -278,18 +398,18 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
         _bowlerWickets = 0;
 
         for (final p in t1) {
-          _battingRecords[p.id] = CricketBattingRecord(
+          _innings1.battingRecords[p.id] = CricketBattingRecord(
             player: p,
             runs: 0,
             balls: 0,
             fours: 0,
             sixes: 0,
             isOut: false,
-            dismissal: 'not out',
+            dismissal: (p.id == _striker.id || p.id == _nonStriker.id) ? 'not out *' : 'yet to bat',
           );
         }
         for (final p in t2) {
-          _bowlingRecords[p.id] = CricketBowlingRecord(
+          _innings1.bowlingRecords[p.id] = CricketBowlingRecord(
             player: p,
             balls: 0,
             runs: 0,
@@ -297,6 +417,10 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
             maidens: 0,
           );
         }
+
+        _innings1.runs = 0;
+        _innings1.wickets = 0;
+        _innings1.balls = 0;
 
         final tossDesc = _match.tossWinner.isNotEmpty
             ? '${_match.tossWinner} won the toss and ${_match.tossDecision.toLowerCase().contains("elected") ? _match.tossDecision : "elected to " + _match.tossDecision}.'
@@ -512,7 +636,12 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
   // ═══════════════════════════════════════════════════════════════════════════
 
   void _addCricketRun(int runs, {bool isBoundary = false}) {
-    if (!isCreator) return;
+    if (!isCreator || _isCricketInningsOver) return;
+
+    if (_cricketBalls >= _maxOvers * 6 && !_isTestCricket) {
+      _checkCricketInningsOrMatchEnd();
+      return;
+    }
 
     _pushHistorySnapshot({
       'runs': _cricketRuns,
@@ -527,6 +656,7 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
       'overBalls': List<String>.from(_currentOverBalls),
       'striker': _striker,
       'nonStriker': _nonStriker,
+      'isCricketInningsOver': _isCricketInningsOver,
     });
 
     setState(() {
@@ -536,6 +666,10 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
       _strikerBalls++;
       _bowlerRuns += runs;
       _bowlerBalls++;
+
+      // Keep innings data in sync
+      _currentInningsData.runs = _cricketRuns;
+      _currentInningsData.balls = _cricketBalls;
 
       _currentOverBalls.add(runs == 0 ? '•' : '$runs');
 
@@ -592,14 +726,12 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
 
       _syncCricketToAppState();
 
-      if (_cricketInnings == 2 && _cricketRuns >= _targetRuns) {
-        WidgetsBinding.instance.addPostFrameCallback((_) => _completeMatch());
-      }
+      _checkCricketInningsOrMatchEnd();
     });
   }
 
   void _addCricketExtra(String type, int runs) {
-    if (!isCreator) return;
+    if (!isCreator || _isCricketInningsOver) return;
 
     _pushHistorySnapshot({
       'runs': _cricketRuns,
@@ -607,12 +739,24 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
       'balls': _cricketBalls,
       'bowlerRuns': _bowlerRuns,
       'overBalls': List<String>.from(_currentOverBalls),
+      'isCricketInningsOver': _isCricketInningsOver,
     });
 
     setState(() {
       _cricketRuns += runs;
       _bowlerRuns += runs;
       _currentOverBalls.add(type);
+
+      _currentInningsData.runs = _cricketRuns;
+      if (type == 'WD') {
+        _currentInningsData.extrasWides += runs;
+      } else if (type == 'NB') {
+        _currentInningsData.extrasNoBalls += runs;
+      } else if (type == 'B') {
+        _currentInningsData.extrasByes += runs;
+      } else if (type == 'LB') {
+        _currentInningsData.extrasLegByes += runs;
+      }
 
       final blRecord = _bowlingRecords[_currentBowler.id];
       if (blRecord != null) {
@@ -621,6 +765,7 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
 
       if (type != 'WD' && type != 'NB') {
         _cricketBalls++;
+        _currentInningsData.balls = _cricketBalls;
         if (_cricketBalls % 6 == 0) _onOverComplete();
       }
 
@@ -640,9 +785,7 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
 
       _syncCricketToAppState();
 
-      if (_cricketInnings == 2 && _cricketRuns >= _targetRuns) {
-        WidgetsBinding.instance.addPostFrameCallback((_) => _completeMatch());
-      }
+      _checkCricketInningsOrMatchEnd();
     });
   }
 
@@ -781,6 +924,8 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
   }
 
   void _confirmDismissal(String mode, MatchPlayer? nextBatsman) {
+    if (!isCreator || _isCricketInningsOver) return;
+
     _pushHistorySnapshot({
       'runs': _cricketRuns,
       'wickets': _cricketWickets,
@@ -789,6 +934,7 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
       'striker': _striker,
       'strikerRuns': _strikerRuns,
       'strikerBalls': _strikerBalls,
+      'isCricketInningsOver': _isCricketInningsOver,
     });
 
     setState(() {
@@ -797,6 +943,9 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
       _bowlerWickets++;
       _bowlerBalls++;
       _currentOverBalls.add('W');
+
+      _currentInningsData.wickets = _cricketWickets;
+      _currentInningsData.balls = _cricketBalls;
 
       final bRecord = _battingRecords[_striker.id];
       if (bRecord != null) {
@@ -830,6 +979,10 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
         _striker = nextBatsman;
         _strikerRuns = 0;
         _strikerBalls = 0;
+        final nextRecord = _battingRecords[nextBatsman.id];
+        if (nextRecord != null) {
+          nextRecord.dismissal = 'not out *';
+        }
       }
 
       if (_cricketBalls % 6 == 0) {
@@ -837,14 +990,51 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
       }
       _syncCricketToAppState();
 
-      if (nextBatsman == null || _cricketWickets >= 10) {
-        if (_cricketInnings == 1) {
-          WidgetsBinding.instance.addPostFrameCallback((_) => _showEndInningsDialog());
-        } else {
-          WidgetsBinding.instance.addPostFrameCallback((_) => _completeMatch());
-        }
-      }
+      _checkCricketInningsOrMatchEnd();
     });
+  }
+
+  void _checkCricketInningsOrMatchEnd() {
+    if (_match.sport != SportType.cricket) return;
+
+    if (_cricketInnings == 1) {
+      final maxBalls = _maxOvers * 6;
+      final isOversUp = !_isTestCricket && _cricketBalls >= maxBalls;
+      final isAllOut = _cricketWickets >= _maxWickets;
+
+      if (isOversUp || isAllOut) {
+        _isCricketInningsOver = true;
+        _innings1.isCompleted = true;
+        _innings1.completionReason = isAllOut ? 'All Out' : 'Overs Completed ($_maxOvers ov)';
+        _innings1.runs = _cricketRuns;
+        _innings1.wickets = _cricketWickets;
+        _innings1.balls = _cricketBalls;
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _showEndInningsDialog(isAuto: true);
+        });
+      }
+    } else if (_cricketInnings == 2) {
+      final maxBalls = _maxOvers * 6;
+      final isTargetReached = _cricketRuns >= _targetRuns;
+      final isOversUp = !_isTestCricket && _cricketBalls >= maxBalls;
+      final isAllOut = _cricketWickets >= _maxWickets;
+
+      if (isTargetReached || isOversUp || isAllOut) {
+        _isCricketInningsOver = true;
+        _innings2.isCompleted = true;
+        _innings2.completionReason = isTargetReached
+            ? 'Target Chased'
+            : (isAllOut ? 'All Out' : 'Overs Completed');
+        _innings2.runs = _cricketRuns;
+        _innings2.wickets = _cricketWickets;
+        _innings2.balls = _cricketBalls;
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _completeMatch();
+        });
+      }
+    }
   }
 
   void _swapStrike() {
@@ -875,27 +1065,102 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
     }
   }
 
-  void _showEndInningsDialog() {
+  void _showEndInningsDialog({bool isAuto = false}) {
     if (!isCreator) return;
+
+    final overStr = '${_cricketBalls ~/ 6}.${_cricketBalls % 6}';
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.sports_cricket_rounded, color: Color(0xFF059669), size: 24),
+            const SizedBox(width: 8),
+            Text('1st Innings Concluded', style: GoogleFonts.outfit(fontWeight: FontWeight.w900)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${_match.team1Name} completed their 1st innings at $_cricketRuns/$_cricketWickets in $overStr overs ($_maxOvers ov max).',
+              style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF6FF),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFBFDBFE)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'TARGET EQUATION',
+                    style: GoogleFonts.outfit(fontSize: 10.5, fontWeight: FontWeight.w800, color: const Color(0xFF1D4ED8)),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${_match.team2Name} need ${_cricketRuns + 1} runs from $_maxOvers overs to win.',
+                    style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFF1E40AF)),
+                  ),
+                  Text(
+                    'Required Run Rate: ${((_cricketRuns + 1) / _maxOvers).toStringAsFixed(2)} RPO',
+                    style: GoogleFonts.outfit(fontSize: 11.5, color: const Color(0xFF2563EB)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _switchCricketInnings();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Start 2nd Innings'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeclareInningsDialog() {
+    if (!isCreator || !_isTestCricket) return;
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.white,
-        title: Text('End 1st Innings?', style: GoogleFonts.outfit(fontWeight: FontWeight.w900)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Declare Innings?', style: GoogleFonts.outfit(fontWeight: FontWeight.w900)),
         content: Text(
-          '${_match.team1Name} finished their innings at $_cricketRuns/$_cricketWickets in ${_cricketBalls ~/ 6}.${_cricketBalls % 6} overs.\n\n${_match.team2Name} will need ${_cricketRuns + 1} runs to win.',
-          style: GoogleFonts.outfit(fontSize: 14),
+          'Declare ${_match.team1Name}\'s 1st innings at $_cricketRuns/$_cricketWickets (${_cricketBalls ~/ 6}.${_cricketBalls % 6} ov)?',
+          style: GoogleFonts.outfit(fontSize: 13.5),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
+              _innings1.completionReason = 'Innings Declared';
               _switchCricketInnings();
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
-            child: const Text('Start 2nd Innings'),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F172A), foregroundColor: Colors.white),
+            child: const Text('Confirm Declaration'),
           ),
         ],
       ),
@@ -908,7 +1173,18 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
       _team1FinalWickets = _cricketWickets;
       _team1FinalOvers = '${_cricketBalls ~/ 6}.${_cricketBalls % 6}';
       _targetRuns = _cricketRuns + 1;
+
+      // Finalize Innings 1
+      _innings1.runs = _team1FinalRuns;
+      _innings1.wickets = _team1FinalWickets;
+      _innings1.balls = _cricketBalls;
+      _innings1.isCompleted = true;
+
+      // Switch to Innings 2
       _cricketInnings = 2;
+      _selectedScorecardInnings = 2; // Automatically switch scorecard tab to 2nd innings!
+      _isCricketInningsOver = false;
+
       _cricketRuns = 0;
       _cricketWickets = 0;
       _cricketBalls = 0;
@@ -927,12 +1203,22 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
       _bowlerBalls = 0;
       _bowlerWickets = 0;
 
+      _maxWickets = battingSquad.isNotEmpty ? math.min(10, math.max(1, battingSquad.length - 1)) : 10;
+
+      // Ensure striker & non-striker in 2nd innings have 'not out *'
+      if (_innings2.battingRecords.containsKey(_striker.id)) {
+        _innings2.battingRecords[_striker.id]!.dismissal = 'not out *';
+      }
+      if (_innings2.battingRecords.containsKey(_nonStriker.id)) {
+        _innings2.battingRecords[_nonStriker.id]!.dismissal = 'not out *';
+      }
+
       _timelineFeed.insert(
         0,
         MatchTimelineItem(
           timeOrOver: 'INN 2',
           title: 'INNINGS BREAK CONCLUDED',
-          description: '2nd innings underway. ${_match.team2Name} need $_targetRuns runs for victory.',
+          description: '2nd innings underway. ${_match.team2Name} need $_targetRuns runs from $_maxOvers overs to win.',
           badgeText: 'TARGET',
           badgeColor: const Color(0xFF1D4ED8),
           badgeTextColor: Colors.white,
@@ -962,7 +1248,15 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
         _cricketBalls = prev['balls'] ?? _cricketBalls;
         _strikerRuns = prev['strikerRuns'] ?? _strikerRuns;
         _strikerBalls = prev['strikerBalls'] ?? _strikerBalls;
+        _nonStrikerRuns = prev['nonStrikerRuns'] ?? _nonStrikerRuns;
+        _nonStrikerBalls = prev['nonStrikerBalls'] ?? _nonStrikerBalls;
+        _bowlerRuns = prev['bowlerRuns'] ?? _bowlerRuns;
+        _bowlerBalls = prev['bowlerBalls'] ?? _bowlerBalls;
         _currentOverBalls = prev['overBalls'] != null ? List<String>.from(prev['overBalls']) : _currentOverBalls;
+        _isCricketInningsOver = prev['isCricketInningsOver'] ?? false;
+        _currentInningsData.runs = _cricketRuns;
+        _currentInningsData.wickets = _cricketWickets;
+        _currentInningsData.balls = _cricketBalls;
         if (_timelineFeed.isNotEmpty) _timelineFeed.removeAt(0);
         _syncCricketToAppState();
       } else if (_match.sport == SportType.football) {
@@ -1000,7 +1294,7 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
     } else {
       final needed = _targetRuns - _cricketRuns;
       final status = needed <= 0
-          ? '${_match.team2Short} won by ${10 - _cricketWickets} wickets'
+          ? '${_match.team2Short} won by ${math.max(1, _maxWickets - _cricketWickets)} wickets'
           : '${_match.team2Short} need $needed runs ($overs ov)';
       context.read<AppState>().updateMatchScore(
         _match.id,
@@ -1247,6 +1541,140 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
     }
   }
 
+  void _showAbandonOrEndMatchDialog() {
+    if (!isCreator) return;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) {
+        return Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Match Options',
+                style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Limited-overs innings conclude strictly by overs limit or all-out. You can officially abandon the match if conditions prevent play or conclude the match.',
+                style: GoogleFonts.outfit(fontSize: 12.5, color: AppColors.textSecondary),
+              ),
+              const SizedBox(height: 18),
+              ListTile(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                tileColor: const Color(0xFFFEF2F2),
+                leading: const Icon(Icons.cloud_off_rounded, color: Color(0xFFEF4444)),
+                title: Text('Abandon Match', style: GoogleFonts.outfit(fontWeight: FontWeight.w800, color: const Color(0xFFEF4444))),
+                subtitle: Text('Abandon whole match due to rain, stoppage, bad light or forfeit', style: GoogleFonts.outfit(fontSize: 12)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _confirmAbandonMatch();
+                },
+              ),
+              const SizedBox(height: 10),
+              ListTile(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                tileColor: const Color(0xFFF8FAFC),
+                leading: const Icon(Icons.check_circle_outline_rounded, color: AppColors.primary),
+                title: Text('Conclude / Finalize Match', style: GoogleFonts.outfit(fontWeight: FontWeight.w800, color: AppColors.primary)),
+                subtitle: Text('Conclude match and finalize current score as official result', style: GoogleFonts.outfit(fontSize: 12)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _completeMatch();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _confirmAbandonMatch() {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text('Abandon Match?', style: GoogleFonts.outfit(fontWeight: FontWeight.w900)),
+          content: Text(
+            'Are you sure you want to abandon the match? It will be officially recorded as "Match Abandoned (No Result)".',
+            style: GoogleFonts.outfit(fontSize: 13.5),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                _abandonMatch('Stoppage / Weather');
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444), foregroundColor: Colors.white),
+              child: const Text('Abandon Match'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _abandonMatch(String reason) {
+    if (!isCreator) return;
+    setState(() {
+      _isMatchAbandoned = true;
+      _abandonReason = reason;
+      _isCricketInningsOver = true;
+    });
+
+    final summary = 'Match Abandoned ($reason)';
+    context.read<AppState>().completeMatch(_match.id, resultText: summary);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Match Abandoned', style: GoogleFonts.outfit(fontWeight: FontWeight.w900, color: const Color(0xFFEF4444))),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.cloud_off_rounded, color: Color(0xFFEF4444), size: 48),
+            const SizedBox(height: 12),
+            Text(
+              summary,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 15),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'No official winner. Points and records shared per tournament rules.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 12.5),
+            ),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.textPrimary, foregroundColor: Colors.white),
+            child: const Text('Return to Arena'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _completeMatch() {
     if (!isCreator) return;
 
@@ -1254,7 +1682,7 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
     if (_match.sport == SportType.cricket) {
       if (_cricketInnings == 2) {
         if (_cricketRuns >= _targetRuns) {
-          summary = '${_match.team2Name} won by ${10 - _cricketWickets} wickets';
+          summary = '${_match.team2Name} won by ${math.max(1, _maxWickets - _cricketWickets)} wickets';
         } else if (_cricketRuns == _targetRuns - 1) {
           summary = 'Match Tied! ($_cricketRuns runs each)';
         } else {
@@ -1445,7 +1873,7 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
               onPressed: _undoLastAction,
             ),
             TextButton(
-              onPressed: _completeMatch,
+              onPressed: _match.sport == SportType.cricket ? _showAbandonOrEndMatchDialog : _completeMatch,
               child: Text(
                 'End Match',
                 style: GoogleFonts.outfit(
@@ -1687,8 +2115,8 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
                             ? (_cricketInnings == 1
                                 ? '${_match.team1Name} are batting • CRR: $crr'
                                 : (_cricketRuns >= _targetRuns
-                                    ? '${_match.team2Name} won by ${10 - _cricketWickets} wickets'
-                                    : '${_match.team2Name} need ${_targetRuns - _cricketRuns} runs to win'))
+                                    ? '${_match.team2Name} won by ${math.max(1, _maxWickets - _cricketWickets)} wickets'
+                                    : '${_match.team2Name} need ${_targetRuns - _cricketRuns} runs from ${(_maxOvers * 6 - _cricketBalls).clamp(0, _maxOvers * 6)} balls'))
                             : (_match.sport == SportType.football
                                 ? '$_footballPeriod • Minute $_footballMinutes\''
                                 : '${_match.sport.name.toUpperCase()} Live in Arena'),
@@ -1926,149 +2354,411 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
   }
 
   Widget _buildCricketDetailedScorecard() {
+    final t1Short = _innings1.battingTeamShort;
+    final t1Score = _cricketInnings == 1
+        ? '$_cricketRuns/$_cricketWickets (${_cricketBalls ~/ 6}.${_cricketBalls % 6} ov)'
+        : '${_innings1.runs}/${_innings1.wickets} (${_innings1.oversStr} ov)';
+
+    final t2Short = _innings2.battingTeamShort;
+    final t2Score = _cricketInnings == 1
+        ? 'Yet to bat'
+        : '$_cricketRuns/$_cricketWickets (${_cricketBalls ~/ 6}.${_cricketBalls % 6} ov)';
+
+    final currentData = _selectedScorecardInnings == 1 ? _innings1 : _innings2;
+    final isSelectedInningsActive = _selectedScorecardInnings == _cricketInnings;
+    final isSelectedInningsUnstarted = _selectedScorecardInnings == 2 && _cricketInnings == 1;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Batting Card Header
+        // ─── STUMPS-STYLE INNINGS TAB SELECTOR ───
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: const Color(0xFF0F172A),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '${_match.team1Name} Batting',
-                style: GoogleFonts.outfit(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 13),
-              ),
-              Text(
-                '$_cricketRuns/$_cricketWickets (${_cricketBalls ~/ 6}.${_cricketBalls % 6} ov)',
-                style: GoogleFonts.outfit(fontWeight: FontWeight.w800, color: const Color(0xFF35A629), fontSize: 13),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 8),
-
-        // Batting Table
-        Container(
-          decoration: BoxDecoration(
-            color: const Color(0xFFF8FAFC),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
-          ),
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                child: Row(
-                  children: [
-                    Expanded(flex: 3, child: Text('BATTER', style: GoogleFonts.outfit(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.textMuted))),
-                    Expanded(child: Text('R', textAlign: TextAlign.center, style: GoogleFonts.outfit(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.textMuted))),
-                    Expanded(child: Text('B', textAlign: TextAlign.center, style: GoogleFonts.outfit(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.textMuted))),
-                    Expanded(child: Text('4s', textAlign: TextAlign.center, style: GoogleFonts.outfit(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.textMuted))),
-                    Expanded(child: Text('6s', textAlign: TextAlign.center, style: GoogleFonts.outfit(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.textMuted))),
-                    Expanded(flex: 2, child: Text('SR', textAlign: TextAlign.right, style: GoogleFonts.outfit(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.textMuted))),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-              ..._battingRecords.values.map((rec) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        flex: 3,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              rec.player.name,
-                              style: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 12.5),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text(
-                              rec.dismissal,
-                              style: GoogleFonts.outfit(fontSize: 10.5, color: rec.isOut ? const Color(0xFFEF4444) : const Color(0xFF059669), fontWeight: FontWeight.w600),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Expanded(child: Text('${rec.runs}', textAlign: TextAlign.center, style: GoogleFonts.outfit(fontWeight: FontWeight.w800, fontSize: 12.5))),
-                      Expanded(child: Text('${rec.balls}', textAlign: TextAlign.center, style: GoogleFonts.outfit(fontSize: 12, color: AppColors.textSecondary))),
-                      Expanded(child: Text('${rec.fours}', textAlign: TextAlign.center, style: GoogleFonts.outfit(fontSize: 12, color: AppColors.textSecondary))),
-                      Expanded(child: Text('${rec.sixes}', textAlign: TextAlign.center, style: GoogleFonts.outfit(fontSize: 12, color: AppColors.textSecondary))),
-                      Expanded(flex: 2, child: Text(rec.strikeRate.toStringAsFixed(1), textAlign: TextAlign.right, style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w700))),
-                    ],
-                  ),
-                );
-              }),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // Bowling Card Header
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
             color: const Color(0xFFF1F5F9),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Text(
-            '${_match.team2Name} Bowling',
-            style: GoogleFonts.outfit(fontWeight: FontWeight.w800, color: AppColors.textPrimary, fontSize: 12.5),
-          ),
-        ),
-        const SizedBox(height: 8),
-
-        // Bowling Table
-        Container(
-          decoration: BoxDecoration(
-            color: const Color(0xFFF8FAFC),
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(color: const Color(0xFFE2E8F0)),
           ),
-          child: Column(
+          child: Row(
             children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                child: Row(
-                  children: [
-                    Expanded(flex: 3, child: Text('BOWLER', style: GoogleFonts.outfit(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.textMuted))),
-                    Expanded(child: Text('O', textAlign: TextAlign.center, style: GoogleFonts.outfit(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.textMuted))),
-                    Expanded(child: Text('M', textAlign: TextAlign.center, style: GoogleFonts.outfit(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.textMuted))),
-                    Expanded(child: Text('R', textAlign: TextAlign.center, style: GoogleFonts.outfit(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.textMuted))),
-                    Expanded(child: Text('W', textAlign: TextAlign.center, style: GoogleFonts.outfit(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.textMuted))),
-                    Expanded(flex: 2, child: Text('ECON', textAlign: TextAlign.right, style: GoogleFonts.outfit(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.textMuted))),
-                  ],
+              // Innings 1 Tab
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() => _selectedScorecardInnings = 1);
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                    decoration: BoxDecoration(
+                      color: _selectedScorecardInnings == 1 ? const Color(0xFF0F172A) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(9),
+                      boxShadow: _selectedScorecardInnings == 1
+                          ? [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.08),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              )
+                            ]
+                          : null,
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          '$t1Short 1st Inn',
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 12.5,
+                            color: _selectedScorecardInnings == 1 ? Colors.white : AppColors.textSecondary,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          t1Score,
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 11.5,
+                            color: _selectedScorecardInnings == 1 ? const Color(0xFF34D399) : AppColors.textPrimary,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-              const Divider(height: 1),
-              ..._bowlingRecords.values.map((bl) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        flex: 3,
-                        child: Text(bl.player.name, style: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 12.5), overflow: TextOverflow.ellipsis),
-                      ),
-                      Expanded(child: Text(bl.oversStr, textAlign: TextAlign.center, style: GoogleFonts.outfit(fontSize: 12))),
-                      Expanded(child: Text('${bl.maidens}', textAlign: TextAlign.center, style: GoogleFonts.outfit(fontSize: 12))),
-                      Expanded(child: Text('${bl.runs}', textAlign: TextAlign.center, style: GoogleFonts.outfit(fontSize: 12))),
-                      Expanded(child: Text('${bl.wickets}', textAlign: TextAlign.center, style: GoogleFonts.outfit(fontWeight: FontWeight.w800, fontSize: 12.5, color: const Color(0xFFEF4444)))),
-                      Expanded(flex: 2, child: Text(bl.economy.toStringAsFixed(1), textAlign: TextAlign.right, style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w700))),
-                    ],
+              const SizedBox(width: 4),
+              // Innings 2 Tab
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() => _selectedScorecardInnings = 2);
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                    decoration: BoxDecoration(
+                      color: _selectedScorecardInnings == 2 ? const Color(0xFF0F172A) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(9),
+                      boxShadow: _selectedScorecardInnings == 2
+                          ? [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.08),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              )
+                            ]
+                          : null,
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          '$t2Short 2nd Inn',
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 12.5,
+                            color: _selectedScorecardInnings == 2 ? Colors.white : AppColors.textSecondary,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          t2Score,
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 11.5,
+                            color: _selectedScorecardInnings == 2 ? const Color(0xFF34D399) : AppColors.textSecondary,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
-                );
-              }),
+                ),
+              ),
             ],
           ),
         ),
+        const SizedBox(height: 14),
+
+        // ─── UNSTARTED 2ND INNINGS STATE ───
+        if (isSelectedInningsUnstarted) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Column(
+              children: [
+                const Icon(Icons.hourglass_empty_rounded, size: 36, color: Color(0xFF94A3B8)),
+                const SizedBox(height: 8),
+                Text(
+                  '${_innings2.battingTeamName} - 2nd Innings',
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.w800, fontSize: 15, color: AppColors.textPrimary),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Innings yet to commence • Target: ${_cricketRuns + 1} runs ($_maxOvers overs)',
+                  style: GoogleFonts.outfit(fontSize: 12.5, color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('PROVISIONAL BATTING SQUAD', style: GoogleFonts.outfit(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.textMuted)),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: _match.team2Players.map((p) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFFCBD5E1)),
+                      ),
+                      child: Text(
+                        '#${p.jerseyNumber} ${p.name}',
+                        style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+          ),
+        ] else ...[
+          // ─── ACTIVE OR COMPLETED INNINGS SCORECARD ───
+          // Batting Card Header
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0F172A),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    '${currentData.battingTeamName} Batting',
+                    style: GoogleFonts.outfit(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 13),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Text(
+                  isSelectedInningsActive
+                      ? '$_cricketRuns/$_cricketWickets (${_cricketBalls ~/ 6}.${_cricketBalls % 6} ov)'
+                      : '${currentData.runs}/${currentData.wickets} (${currentData.oversStr} ov)',
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.w800, color: const Color(0xFF34D399), fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // Batting Table
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: Row(
+                    children: [
+                      Expanded(flex: 3, child: Text('BATTER', style: GoogleFonts.outfit(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.textMuted))),
+                      Expanded(child: Text('R', textAlign: TextAlign.center, style: GoogleFonts.outfit(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.textMuted))),
+                      Expanded(child: Text('B', textAlign: TextAlign.center, style: GoogleFonts.outfit(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.textMuted))),
+                      Expanded(child: Text('4s', textAlign: TextAlign.center, style: GoogleFonts.outfit(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.textMuted))),
+                      Expanded(child: Text('6s', textAlign: TextAlign.center, style: GoogleFonts.outfit(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.textMuted))),
+                      Expanded(flex: 2, child: Text('SR', textAlign: TextAlign.right, style: GoogleFonts.outfit(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.textMuted))),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                ...currentData.battingRecords.values.map((rec) {
+                  final isOnCrease = isSelectedInningsActive && (rec.player.id == _striker.id || rec.player.id == _nonStriker.id);
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      rec.player.name,
+                                      style: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 12.5),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  if (isOnCrease) ...[
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      rec.player.id == _striker.id ? '*' : '',
+                                      style: GoogleFonts.outfit(fontWeight: FontWeight.w900, color: const Color(0xFF059669), fontSize: 13),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              Text(
+                                rec.dismissal,
+                                style: GoogleFonts.outfit(
+                                  fontSize: 10.5,
+                                  color: rec.isOut
+                                      ? const Color(0xFFEF4444)
+                                      : (rec.dismissal.contains('not out') ? const Color(0xFF059669) : AppColors.textSecondary),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Expanded(child: Text('${rec.runs}', textAlign: TextAlign.center, style: GoogleFonts.outfit(fontWeight: FontWeight.w800, fontSize: 12.5))),
+                        Expanded(child: Text('${rec.balls}', textAlign: TextAlign.center, style: GoogleFonts.outfit(fontSize: 12, color: AppColors.textSecondary))),
+                        Expanded(child: Text('${rec.fours}', textAlign: TextAlign.center, style: GoogleFonts.outfit(fontSize: 12, color: AppColors.textSecondary))),
+                        Expanded(child: Text('${rec.sixes}', textAlign: TextAlign.center, style: GoogleFonts.outfit(fontSize: 12, color: AppColors.textSecondary))),
+                        Expanded(flex: 2, child: Text(rec.strikeRate.toStringAsFixed(1), textAlign: TextAlign.right, style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w700))),
+                      ],
+                    ),
+                  );
+                }),
+                const Divider(height: 1),
+                // Extras & Total Breakdown
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Extras: ${currentData.totalExtras} (wd ${currentData.extrasWides}, nb ${currentData.extrasNoBalls}, b ${currentData.extrasByes}, lb ${currentData.extrasLegByes})',
+                        style: GoogleFonts.outfit(fontSize: 11.5, color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+                      ),
+                      Text(
+                        'Total: ${isSelectedInningsActive ? "$_cricketRuns/$_cricketWickets" : "${currentData.runs}/${currentData.wickets}"}',
+                        style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Fall of Wickets
+          if (currentData.fallOfWickets.isNotEmpty) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('FALL OF WICKETS', style: GoogleFonts.outfit(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.textMuted)),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: currentData.fallOfWickets.map((fow) {
+                      return Text(
+                        fow,
+                        style: GoogleFonts.outfit(fontSize: 11.5, color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          // Bowling Card Header
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '${currentData.bowlingTeamName} Bowling',
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.w800, color: AppColors.textPrimary, fontSize: 12.5),
+                ),
+                Text(
+                  'Overs Limit: $_maxOvers ov',
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.w600, color: AppColors.textSecondary, fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // Bowling Table
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: Row(
+                    children: [
+                      Expanded(flex: 3, child: Text('BOWLER', style: GoogleFonts.outfit(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.textMuted))),
+                      Expanded(child: Text('O', textAlign: TextAlign.center, style: GoogleFonts.outfit(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.textMuted))),
+                      Expanded(child: Text('M', textAlign: TextAlign.center, style: GoogleFonts.outfit(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.textMuted))),
+                      Expanded(child: Text('R', textAlign: TextAlign.center, style: GoogleFonts.outfit(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.textMuted))),
+                      Expanded(child: Text('W', textAlign: TextAlign.center, style: GoogleFonts.outfit(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.textMuted))),
+                      Expanded(flex: 2, child: Text('ECON', textAlign: TextAlign.right, style: GoogleFonts.outfit(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.textMuted))),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                ...currentData.bowlingRecords.values.map((bl) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: Text(bl.player.name, style: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 12.5), overflow: TextOverflow.ellipsis),
+                        ),
+                        Expanded(child: Text(bl.oversStr, textAlign: TextAlign.center, style: GoogleFonts.outfit(fontSize: 12))),
+                        Expanded(child: Text('${bl.maidens}', textAlign: TextAlign.center, style: GoogleFonts.outfit(fontSize: 12))),
+                        Expanded(child: Text('${bl.runs}', textAlign: TextAlign.center, style: GoogleFonts.outfit(fontSize: 12))),
+                        Expanded(child: Text('${bl.wickets}', textAlign: TextAlign.center, style: GoogleFonts.outfit(fontWeight: FontWeight.w800, fontSize: 12.5, color: const Color(0xFFEF4444)))),
+                        Expanded(flex: 2, child: Text(bl.economy.toStringAsFixed(1), textAlign: TextAlign.right, style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w700))),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -2142,6 +2832,108 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
 
   // ─── SCORING KEYPAD (CRICKET) ───
   Widget _buildCricketPad() {
+    // If innings is completed:
+    if (_isCricketInningsOver) {
+      if (_cricketInnings == 1) {
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF0FDF4),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFBBF7D0)),
+          ),
+          child: Column(
+            children: [
+              const Icon(Icons.sports_cricket_rounded, size: 36, color: Color(0xFF059669)),
+              const SizedBox(height: 8),
+              Text(
+                '1st Innings Concluded',
+                style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w900, color: const Color(0xFF065F46)),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${_match.team1Name}: $_cricketRuns/$_cricketWickets in ${_cricketBalls ~/ 6}.${_cricketBalls % 6} overs',
+                style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Target: ${_cricketRuns + 1} runs from $_maxOvers overs',
+                style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF1D4ED8)),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _switchCricketInnings,
+                  icon: const Icon(Icons.play_arrow_rounded),
+                  label: const Text('Start 2nd Innings'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF059669),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      } else {
+        // 2nd Innings Concluded
+        String matchResult;
+        if (_cricketRuns >= _targetRuns) {
+          matchResult = '${_match.team2Name} won by ${math.max(1, _maxWickets - _cricketWickets)} wickets';
+        } else if (_cricketRuns == _targetRuns - 1) {
+          matchResult = 'Match Tied! ($_cricketRuns runs each)';
+        } else {
+          final diff = _targetRuns - 1 - _cricketRuns;
+          matchResult = '${_match.team1Name} won by $diff runs';
+        }
+
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEFF6FF),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFBFDBFE)),
+          ),
+          child: Column(
+            children: [
+              const Icon(Icons.emoji_events_rounded, size: 40, color: Colors.amber),
+              const SizedBox(height: 8),
+              Text(
+                'Match Concluded',
+                style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w900, color: const Color(0xFF1E40AF)),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                matchResult,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _completeMatch,
+                  icon: const Icon(Icons.check_circle_rounded),
+                  label: const Text('Finalize Official Match Report'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+    }
+
     return Column(
       children: [
         // Runs Action Grid
@@ -2218,21 +3010,20 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
           ],
         ),
 
-        // Innings & Target Transition Controls
-        if (_cricketInnings == 1) ...[
+        // Test Cricket Declaration Option (Only allowed in Test matches)
+        if (_isTestCricket && _cricketInnings == 1) ...[
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              onPressed: _showEndInningsDialog,
-              icon: const Icon(Icons.swap_horizontal_circle_outlined, size: 18),
+              onPressed: _showDeclareInningsDialog,
+              icon: const Icon(Icons.flag_circle_outlined, size: 18, color: Color(0xFF0F172A)),
               label: Text(
-                'End 1st Innings / Switch Sides',
-                style: GoogleFonts.outfit(fontWeight: FontWeight.w800, fontSize: 13),
+                'Declare 1st Innings (Test Match Only)',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.w800, fontSize: 13, color: const Color(0xFF0F172A)),
               ),
               style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.textPrimary,
-                side: const BorderSide(color: Color(0xFFCBD5E1)),
+                side: const BorderSide(color: Color(0xFF0F172A)),
                 padding: const EdgeInsets.symmetric(vertical: 13),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
