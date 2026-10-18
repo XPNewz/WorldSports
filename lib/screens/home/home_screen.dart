@@ -513,16 +513,10 @@ class HomeScreen extends StatelessWidget {
 
                   // Interleave promoted ad at index 1 and index 4 (if available)
                   if (i == 1 && promotedAds.isNotEmpty) {
-                    return Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                      child: _TwitterPromotedAdPost(ad: promotedAds[0]),
-                    );
+                    return _TwitterPromotedAdPost(ad: promotedAds[0]);
                   }
                   if (i == 4 && promotedAds.length > 1) {
-                    return Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                      child: _TwitterPromotedAdPost(ad: promotedAds[1]),
-                    );
+                    return _TwitterPromotedAdPost(ad: promotedAds[1]);
                   }
 
                   // Calculate actual post index
@@ -534,10 +528,7 @@ class HomeScreen extends StatelessWidget {
                   }
 
                   if (postIdx >= 0 && postIdx < feedPosts.length) {
-                    return Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                      child: _TwitterSportsTweetCard(post: feedPosts[postIdx]),
-                    );
+                    return _TwitterSportsTweetCard(post: feedPosts[postIdx]);
                   }
                   return const SizedBox.shrink();
                 },
@@ -555,19 +546,33 @@ class HomeScreen extends StatelessWidget {
                   title: 'Upcoming Fixtures',
                   accentColor: AppColors.primary,
                   icon: Icons.calendar_month_rounded,
-                  actionLabel: 'Calendar',
+                  actionLabel: 'See all (${filteredUpcoming.length})',
                   onAction: () => context.read<AppState>().setBottomNavIndex(2),
                 ),
               ),
             ),
 
-            SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (_, i) => Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
-                  child: _UpcomingLightMatchCard(match: filteredUpcoming[i]),
-                ),
-                childCount: filteredUpcoming.length,
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: 205,
+                child: filteredUpcoming.isEmpty
+                    ? Center(
+                        child: Text(
+                          'No upcoming fixtures scheduled',
+                          style: GoogleFonts.outfit(
+                            color: AppColors.textMuted,
+                            fontSize: 13,
+                          ),
+                        ),
+                      )
+                    : ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        itemCount: filteredUpcoming.length,
+                        separatorBuilder: (_, _) => const SizedBox(width: 14),
+                        itemBuilder: (_, i) => _UpcomingLightMatchCard(match: filteredUpcoming[i]),
+                      ),
               ),
             ),
 
@@ -1317,117 +1322,128 @@ class _UpcomingLightMatchCard extends StatelessWidget {
     final time =
         '${match.dateTime.hour.toString().padLeft(2, '0')}:${match.dateTime.minute.toString().padLeft(2, '0')}';
 
-    return GlassCard(
-      padding: const EdgeInsets.all(14),
-      borderColor: sportColor.withValues(alpha: 0.2),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: AppColors.sportLightBg(match.sport.name),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(
-              _sportIcon(match.sport),
-              color: AppColors.textPrimary,
-              size: 24,
-            ),
+    return BouncingTap(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => LiveScoringScreen(match: match),
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        );
+      },
+      child: Container(
+        width: 320,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: AppColors.cellBorderColor, width: AppColors.cellBorderWidth),
+          boxShadow: const [AppColors.cellShadow],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                Text(
-                  match.team1Name,
-                  style: GoogleFonts.outfit(
-                    color: AppColors.textPrimary,
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w900,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  match.team2Name,
-                  style: GoogleFonts.outfit(
-                    color: const Color(0xFF64748B),
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    AthleticTag(label: match.sport.name, color: sportColor),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        match.venue,
-                        style: GoogleFonts.outfit(
-                          color: AppColors.textMuted,
-                          fontSize: 11,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                SportBadge(sport: match.sport, showLabel: true, size: 24),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    match.venue.isNotEmpty ? match.venue : match.format,
+                    style: GoogleFonts.outfit(
+                      color: AppColors.textMuted,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
                     ),
-                  ],
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryLight,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.schedule_rounded, size: 11, color: AppColors.primary),
+                      const SizedBox(width: 4),
+                      Text(
+                        time,
+                        style: GoogleFonts.outfit(
+                          color: AppColors.primary,
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryLight,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  time,
-                  style: GoogleFonts.outfit(
-                    color: AppColors.primary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w900,
+            const SizedBox(height: 12),
+
+            // Team 1 Row
+            _MatchTeamRow(
+              name: match.team1Name,
+              shortName: match.team1Short,
+              score: 'VS',
+              isActive: false,
+              sport: match.sport,
+              crestColor: AppColors.primary,
+            ),
+            const SizedBox(height: 8),
+
+            // Team 2 Row
+            _MatchTeamRow(
+              name: match.team2Name,
+              shortName: match.team2Short,
+              score: '',
+              isActive: false,
+              sport: match.sport,
+              crestColor: AppColors.sportAccentColor(match.sport.name),
+            ),
+
+            const Spacer(),
+
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceLight,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 5,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: sportColor,
+                      shape: BoxShape.circle,
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Scheduled at $time • ${match.format}',
+                      style: GoogleFonts.outfit(
+                        color: AppColors.textSecondary,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 3),
-              Text(
-                'TODAY',
-                style: GoogleFonts.outfit(
-                  color: AppColors.textMuted,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
-  }
-
-  IconData _sportIcon(SportType s) {
-    switch (s) {
-      case SportType.cricket:
-        return Icons.sports_cricket_rounded;
-      case SportType.football:
-        return Icons.sports_soccer_rounded;
-      case SportType.basketball:
-        return Icons.sports_basketball_rounded;
-      case SportType.tennis:
-        return Icons.sports_tennis_rounded;
-    }
   }
 }
 
@@ -1762,16 +1778,16 @@ class _TwitterSportsTweetCard extends StatelessWidget {
         : AppColors.primary;
 
     return Container(
-      decoration: BoxDecoration(
+      width: double.infinity,
+      decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.cellBorderColor, width: AppColors.cellBorderWidth),
-        boxShadow: const [AppColors.cellShadow],
+        border: Border(
+          bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1.0),
+        ),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(16),
           onTap: () {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -1785,7 +1801,7 @@ class _TwitterSportsTweetCard extends StatelessWidget {
             );
           },
           child: Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -2219,22 +2235,19 @@ class _TwitterPromotedAdPost extends StatelessWidget {
     AdService.recordImpression(ad.id);
 
     return Container(
-      decoration: BoxDecoration(
+      width: double.infinity,
+      decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.primary.withOpacity(0.25),
-          width: 1.2,
+        border: Border(
+          bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1.0),
         ),
-        boxShadow: const [AppColors.cellShadow],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(16),
           onTap: () => AdService.showAdDetailsModal(context, ad),
           child: Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

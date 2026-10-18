@@ -1075,18 +1075,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ],
                   ),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                    ),
-                    child: const Icon(
-                      Icons.lock_rounded,
-                      size: 16,
-                      color: AppColors.primary,
-                    ),
+                  const Icon(
+                    Icons.lock_rounded,
+                    size: 20,
+                    color: AppColors.primary,
                   ),
                 ],
               ),
