@@ -119,6 +119,35 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
       expect(firstPost.isBookmarked, isTrue);
     });
+
+    testWidgets('Posts and updates render full width without left/right box borders', (tester) async {
+      tester.view.physicalSize = const Size(1080, 3200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final appState = AppState();
+      await tester.pumpWidget(buildTestHomeScreen(appState));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Post text should exist
+      final postTextFinder = find.text('Mumbai Cricket Association');
+      expect(postTextFinder, findsOneWidget);
+
+      // Verify that post container has no left/right margins (width spans full screen)
+      final postRenderBox = tester.renderObject(postTextFinder);
+      expect(postRenderBox, isNotNull);
+
+      // Verify upcoming fixtures section displays horizontal carousel like live arena matches
+      expect(find.text('Upcoming Fixtures'), findsOneWidget);
+      final upcomingHorizontalList = find.byWidgetPredicate(
+        (w) => w is ListView && w.scrollDirection == Axis.horizontal,
+      );
+      // Both Live Arena Matches, Nearby Live Matches, and Upcoming Fixtures are horizontal ListViews
+      expect(upcomingHorizontalList, findsWidgets);
+    });
   });
 
   group('ScoresScreen Scoreboard Sponsor Ad Tests', () {

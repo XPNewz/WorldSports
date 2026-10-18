@@ -88,10 +88,19 @@ void main() {
       await tester.pumpWidget(createTestableWidget(const LoginScreen()));
       await tester.pumpAndSettle();
 
-      // Header Branding: Athletic World & Lock icon only (no 256-bit secure text)
+      // Header Branding: Athletic World & Lock icon directly without outer box
       expect(find.text('ATHLETIC WORLD'), findsOneWidget);
-      expect(find.byIcon(Icons.lock_rounded), findsOneWidget);
+      final lockFinder = find.byIcon(Icons.lock_rounded);
+      expect(lockFinder, findsOneWidget);
       expect(find.text('256-BIT SECURE'), findsNothing);
+      // Lock icon is rendered directly without an enclosing decorated Container box
+      expect(
+        find.ancestor(
+          of: lockFinder,
+          matching: find.byWidgetPredicate((w) => w is Container && w.decoration is BoxDecoration && (w.decoration as BoxDecoration).border != null),
+        ),
+        findsNothing,
+      );
 
       // Welcome Title
       expect(find.text('Welcome Back, Athlete'), findsOneWidget);
