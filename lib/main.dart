@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'core/theme/app_theme.dart';
 import 'core/state/app_state.dart';
+import 'core/services/supabase_service.dart';
 import 'screens/auth/auth_screen.dart';
 
 void main() async {
@@ -19,6 +20,9 @@ void main() async {
       systemNavigationBarIconBrightness: Brightness.dark,
     ),
   );
+
+  // Initialize Supabase Client
+  await SupabaseService.initialize();
 
   final appState = AppState();
   await appState.loadPersistedState();

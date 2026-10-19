@@ -3,20 +3,177 @@ import '../theme/app_theme.dart';
 
 enum SportType { cricket, football, basketball, tennis }
 
-enum UserRole { player, coach, organiser }
+enum UserRole { player, coach, organiser, umpire }
 
 enum MatchStatus { upcoming, live, completed }
+
+// ─── Sports Specialization Specs ─────────────────────────────────────────────
+
+class CricketSpecs {
+  final String battingHand; // 'Right-hand bat', 'Left-hand bat'
+  final String bowlingArm; // 'Right-arm', 'Left-arm'
+  final String bowlingCategory; // 'Fast / Pace', 'Spin'
+  final String bowlingVariation; // Fast: 'Fast', 'Fast-Medium', 'Medium-Fast', 'Medium' | Spin: 'Off-Spinner', 'Leg-Spinner', 'Slow Left-Arm Orthodox', 'Left-Arm Unorthodox (Chinaman)'
+  final bool isWicketKeeper;
+
+  const CricketSpecs({
+    this.battingHand = 'Right-hand bat',
+    this.bowlingArm = 'Right-arm',
+    this.bowlingCategory = 'Fast / Pace',
+    this.bowlingVariation = 'Fast-Medium',
+    this.isWicketKeeper = false,
+  });
+
+  String get summary {
+    final list = <String>[battingHand];
+    if (bowlingArm.isNotEmpty && bowlingVariation.isNotEmpty) {
+      list.add('$bowlingArm $bowlingVariation');
+    }
+    if (isWicketKeeper) {
+      list.add('Wicketkeeper');
+    }
+    return list.join(' • ');
+  }
+
+  CricketSpecs copyWith({
+    String? battingHand,
+    String? bowlingArm,
+    String? bowlingCategory,
+    String? bowlingVariation,
+    bool? isWicketKeeper,
+  }) {
+    return CricketSpecs(
+      battingHand: battingHand ?? this.battingHand,
+      bowlingArm: bowlingArm ?? this.bowlingArm,
+      bowlingCategory: bowlingCategory ?? this.bowlingCategory,
+      bowlingVariation: bowlingVariation ?? this.bowlingVariation,
+      isWicketKeeper: isWicketKeeper ?? this.isWicketKeeper,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'batting_hand': battingHand,
+    'bowling_arm': bowlingArm,
+    'bowling_category': bowlingCategory,
+    'bowling_variation': bowlingVariation,
+    'is_wicketkeeper': isWicketKeeper,
+  };
+
+  factory CricketSpecs.fromMap(Map<String, dynamic> map) => CricketSpecs(
+    battingHand: map['batting_hand'] ?? 'Right-hand bat',
+    bowlingArm: map['bowling_arm'] ?? 'Right-arm',
+    bowlingCategory: map['bowling_category'] ?? 'Fast / Pace',
+    bowlingVariation: map['bowling_variation'] ?? 'Fast-Medium',
+    isWicketKeeper: map['is_wicketkeeper'] ?? false,
+  );
+}
+
+class FootballSpecs {
+  final String position; // 'Goalkeeper', 'Defender', 'Midfielder', 'Striker / Forward'
+  final String preferredFoot; // 'Right', 'Left', 'Both'
+
+  const FootballSpecs({
+    this.position = 'Striker / Forward',
+    this.preferredFoot = 'Right',
+  });
+
+  String get summary => '$position • Preferred foot: $preferredFoot';
+
+  FootballSpecs copyWith({
+    String? position,
+    String? preferredFoot,
+  }) {
+    return FootballSpecs(
+      position: position ?? this.position,
+      preferredFoot: preferredFoot ?? this.preferredFoot,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'position': position,
+    'preferred_foot': preferredFoot,
+  };
+
+  factory FootballSpecs.fromMap(Map<String, dynamic> map) => FootballSpecs(
+    position: map['position'] ?? 'Striker / Forward',
+    preferredFoot: map['preferred_foot'] ?? 'Right',
+  );
+}
+
+class BasketballSpecs {
+  final String position; // 'Point Guard', 'Shooting Guard', 'Small Forward', 'Power Forward', 'Center'
+
+  const BasketballSpecs({
+    this.position = 'Point Guard',
+  });
+
+  String get summary => position;
+
+  BasketballSpecs copyWith({String? position}) => BasketballSpecs(
+    position: position ?? this.position,
+  );
+
+  Map<String, dynamic> toMap() => {'position': position};
+  factory BasketballSpecs.fromMap(Map<String, dynamic> map) => BasketballSpecs(
+    position: map['position'] ?? 'Point Guard',
+  );
+}
+
+class TennisSpecs {
+  final String hand; // 'Right-handed', 'Left-handed'
+  final String backhand; // 'Two-handed', 'One-handed'
+  final String playstyle; // 'All-Court', 'Baseliner', 'Serve & Volley'
+
+  const TennisSpecs({
+    this.hand = 'Right-handed',
+    this.backhand = 'Two-handed',
+    this.playstyle = 'All-Court',
+  });
+
+  String get summary => '$hand ($backhand backhand) • $playstyle';
+
+  TennisSpecs copyWith({
+    String? hand,
+    String? backhand,
+    String? playstyle,
+  }) => TennisSpecs(
+    hand: hand ?? this.hand,
+    backhand: backhand ?? this.backhand,
+    playstyle: playstyle ?? this.playstyle,
+  );
+
+  Map<String, dynamic> toMap() => {
+    'hand': hand,
+    'backhand': backhand,
+    'playstyle': playstyle,
+  };
+
+  factory TennisSpecs.fromMap(Map<String, dynamic> map) => TennisSpecs(
+    hand: map['hand'] ?? 'Right-handed',
+    backhand: map['backhand'] ?? 'Two-handed',
+    playstyle: map['playstyle'] ?? 'All-Court',
+  );
+}
 
 // ─── Models ──────────────────────────────────────────────────────────────────
 
 class UserModel {
   final String id;
+  final String userId;
   final String name;
   final String username;
   final String email;
+  final String phone;
   final String avatar;
   final UserRole role;
   final List<SportType> sports;
+  final SportType primarySport;
+  final String primaryRole;
+  final CricketSpecs? cricketSpecs;
+  final FootballSpecs? footballSpecs;
+  final BasketballSpecs? basketballSpecs;
+  final TennisSpecs? tennisSpecs;
+  final bool hasCompletedProfile;
   final List<String> teamIds;
   final List<String> clubIds;
   final int followers;
@@ -27,12 +184,21 @@ class UserModel {
 
   const UserModel({
     required this.id,
+    this.userId = 'WS-1001',
     required this.name,
     required this.username,
     required this.email,
+    this.phone = '',
     this.avatar = '',
     required this.role,
     required this.sports,
+    this.primarySport = SportType.cricket,
+    this.primaryRole = 'All-Rounder',
+    this.cricketSpecs,
+    this.footballSpecs,
+    this.basketballSpecs,
+    this.tennisSpecs,
+    this.hasCompletedProfile = false,
     this.teamIds = const [],
     this.clubIds = const [],
     this.followers = 0,
@@ -41,6 +207,86 @@ class UserModel {
     this.location = '',
     this.bio = '',
   });
+
+  int get profileCompletionPercent {
+    if (hasCompletedProfile) return 100;
+    int score = 40; // baseline for created account with name & email
+    if (username.isNotEmpty) score += 10;
+    if (phone.isNotEmpty) score += 10;
+    if (role == UserRole.umpire) {
+      return 100; // Umpires don't need batting/bowling specs
+    }
+    if (primarySport == SportType.cricket && cricketSpecs != null) score += 40;
+    if (primarySport == SportType.football && footballSpecs != null) score += 40;
+    if (primarySport == SportType.basketball && basketballSpecs != null) score += 40;
+    if (primarySport == SportType.tennis && tennisSpecs != null) score += 40;
+    return score.clamp(0, 100);
+  }
+
+  String getSpecsSummaryForSport(SportType sport) {
+    switch (sport) {
+      case SportType.cricket:
+        return cricketSpecs?.summary ?? 'Cricket Athlete';
+      case SportType.football:
+        return footballSpecs?.summary ?? 'Football Athlete';
+      case SportType.basketball:
+        return basketballSpecs?.summary ?? 'Basketball Athlete';
+      case SportType.tennis:
+        return tennisSpecs?.summary ?? 'Tennis Athlete';
+    }
+  }
+
+  UserModel copyWith({
+    String? id,
+    String? userId,
+    String? name,
+    String? username,
+    String? email,
+    String? phone,
+    String? avatar,
+    UserRole? role,
+    List<SportType>? sports,
+    SportType? primarySport,
+    String? primaryRole,
+    CricketSpecs? cricketSpecs,
+    FootballSpecs? footballSpecs,
+    BasketballSpecs? basketballSpecs,
+    TennisSpecs? tennisSpecs,
+    bool? hasCompletedProfile,
+    List<String>? teamIds,
+    List<String>? clubIds,
+    int? followers,
+    int? following,
+    Map<SportType, PlayerStats>? stats,
+    String? location,
+    String? bio,
+  }) {
+    return UserModel(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      name: name ?? this.name,
+      username: username ?? this.username,
+      email: email ?? this.email,
+      phone: phone ?? this.phone,
+      avatar: avatar ?? this.avatar,
+      role: role ?? this.role,
+      sports: sports ?? this.sports,
+      primarySport: primarySport ?? this.primarySport,
+      primaryRole: primaryRole ?? this.primaryRole,
+      cricketSpecs: cricketSpecs ?? this.cricketSpecs,
+      footballSpecs: footballSpecs ?? this.footballSpecs,
+      basketballSpecs: basketballSpecs ?? this.basketballSpecs,
+      tennisSpecs: tennisSpecs ?? this.tennisSpecs,
+      hasCompletedProfile: hasCompletedProfile ?? this.hasCompletedProfile,
+      teamIds: teamIds ?? this.teamIds,
+      clubIds: clubIds ?? this.clubIds,
+      followers: followers ?? this.followers,
+      following: following ?? this.following,
+      stats: stats ?? this.stats,
+      location: location ?? this.location,
+      bio: bio ?? this.bio,
+    );
+  }
 }
 
 class PlayerStats {
@@ -194,6 +440,9 @@ class MatchPlayer {
   final bool isCaptain;
   final bool isWicketKeeperOrGoalkeeper;
   final String avatar;
+  final String userId;
+  final String username;
+  final String specsSummary;
 
   const MatchPlayer({
     required this.id,
@@ -203,6 +452,9 @@ class MatchPlayer {
     this.isCaptain = false,
     this.isWicketKeeperOrGoalkeeper = false,
     this.avatar = '',
+    this.userId = '',
+    this.username = '',
+    this.specsSummary = '',
   });
 
   MatchPlayer copyWith({
@@ -213,6 +465,9 @@ class MatchPlayer {
     bool? isCaptain,
     bool? isWicketKeeperOrGoalkeeper,
     String? avatar,
+    String? userId,
+    String? username,
+    String? specsSummary,
   }) {
     return MatchPlayer(
       id: id ?? this.id,
@@ -222,6 +477,9 @@ class MatchPlayer {
       isCaptain: isCaptain ?? this.isCaptain,
       isWicketKeeperOrGoalkeeper: isWicketKeeperOrGoalkeeper ?? this.isWicketKeeperOrGoalkeeper,
       avatar: avatar ?? this.avatar,
+      userId: userId ?? this.userId,
+      username: username ?? this.username,
+      specsSummary: specsSummary ?? this.specsSummary,
     );
   }
 
@@ -268,6 +526,12 @@ class MatchModel {
   final String tossDecision;
   final String resultText;
   final String creatorId;
+  final String scorerId;
+  final String scorerName;
+  final String umpire1Id;
+  final String umpire1Name;
+  final String umpire2Id;
+  final String umpire2Name;
 
   const MatchModel({
     required this.id,
@@ -290,6 +554,12 @@ class MatchModel {
     this.tossDecision = '',
     this.resultText = '',
     this.creatorId = 'u001',
+    this.scorerId = '',
+    this.scorerName = '',
+    this.umpire1Id = '',
+    this.umpire1Name = '',
+    this.umpire2Id = '',
+    this.umpire2Name = '',
   });
 
   MatchModel copyWith({
@@ -313,6 +583,12 @@ class MatchModel {
     String? tossDecision,
     String? resultText,
     String? creatorId,
+    String? scorerId,
+    String? scorerName,
+    String? umpire1Id,
+    String? umpire1Name,
+    String? umpire2Id,
+    String? umpire2Name,
   }) {
     return MatchModel(
       id: id ?? this.id,
@@ -335,6 +611,12 @@ class MatchModel {
       tossDecision: tossDecision ?? this.tossDecision,
       resultText: resultText ?? this.resultText,
       creatorId: creatorId ?? this.creatorId,
+      scorerId: scorerId ?? this.scorerId,
+      scorerName: scorerName ?? this.scorerName,
+      umpire1Id: umpire1Id ?? this.umpire1Id,
+      umpire1Name: umpire1Name ?? this.umpire1Name,
+      umpire2Id: umpire2Id ?? this.umpire2Id,
+      umpire2Name: umpire2Name ?? this.umpire2Name,
     );
   }
 }

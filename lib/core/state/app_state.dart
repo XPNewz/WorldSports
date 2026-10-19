@@ -81,6 +81,46 @@ class AppState extends ChangeNotifier {
     } catch (_) {}
   }
 
+  void updateCricketSpecs(CricketSpecs specs) {
+    if (_currentUser == null) return;
+    _currentUser = _currentUser!.copyWith(
+      cricketSpecs: specs,
+      hasCompletedProfile: true,
+      primaryRole: specs.summary,
+    );
+    notifyListeners();
+  }
+
+  void updateFootballSpecs(FootballSpecs specs) {
+    if (_currentUser == null) return;
+    _currentUser = _currentUser!.copyWith(
+      footballSpecs: specs,
+      hasCompletedProfile: true,
+      primaryRole: specs.summary,
+    );
+    notifyListeners();
+  }
+
+  void updateBasketballSpecs(BasketballSpecs specs) {
+    if (_currentUser == null) return;
+    _currentUser = _currentUser!.copyWith(
+      basketballSpecs: specs,
+      hasCompletedProfile: true,
+      primaryRole: specs.summary,
+    );
+    notifyListeners();
+  }
+
+  void updateTennisSpecs(TennisSpecs specs) {
+    if (_currentUser == null) return;
+    _currentUser = _currentUser!.copyWith(
+      tennisSpecs: specs,
+      hasCompletedProfile: true,
+      primaryRole: specs.summary,
+    );
+    notifyListeners();
+  }
+
   List<MatchModel> _matches = [];
 
   List<MatchModel> get allMatches {
@@ -420,6 +460,25 @@ class MockData {
     following: 67,
     location: 'Delhi, India',
     bio: 'Organising premier multi-sport invitational tournaments and youth developmental championships.',
+    stats: {},
+  );
+
+  static final UserModel demoUmpire = UserModel(
+    id: 'u004',
+    userId: 'WS-9004',
+    name: 'Anil Chaudhary',
+    username: 'anil_umpire',
+    email: 'anil@worldsports.com',
+    avatar: '',
+    role: UserRole.umpire,
+    primarySport: SportType.cricket,
+    primaryRole: 'Certified Elite Umpire',
+    hasCompletedProfile: true,
+    sports: [SportType.cricket, SportType.football],
+    followers: 3410,
+    following: 112,
+    location: 'Delhi, India',
+    bio: 'BCCI & MCA Certified Elite Umpire • 180+ matches officiated • Tournament referee & technical bylaws director.',
     stats: {},
   );
 

@@ -80,8 +80,6 @@ class _SearchScreenState extends State<SearchScreen> {
       sport: _selectedSport,
     );
 
-    final locations = SearchCatalogService.getAvailableLocations();
-
     final activeFiltersCount = (_selectedSport != null ? 1 : 0) +
         (_selectedLocation != 'All Locations' ? 1 : 0);
 
@@ -111,7 +109,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       physics: const BouncingScrollPhysics(),
                       padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
                       itemCount: results.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      separatorBuilder: (_, _) => const SizedBox(height: 12),
                       itemBuilder: (ctx, index) {
                         final item = results[index];
                         return _buildResultCard(item, query);
@@ -351,7 +349,7 @@ class _SearchScreenState extends State<SearchScreen> {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: SearchCategory.values.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (ctx, index) {
                 final cat = SearchCategory.values[index];
                 final isSelected = _selectedCategory == cat;

@@ -423,7 +423,7 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
         _innings1.balls = 0;
 
         final tossDesc = _match.tossWinner.isNotEmpty
-            ? '${_match.tossWinner} won the toss and ${_match.tossDecision.toLowerCase().contains("elected") ? _match.tossDecision : "elected to " + _match.tossDecision}.'
+            ? '${_match.tossWinner} won the toss and ${_match.tossDecision.toLowerCase().contains("elected") ? _match.tossDecision : "elected to ${_match.tossDecision}"}.'
             : 'Match initiated.';
         _timelineFeed.add(
           MatchTimelineItem(
@@ -1964,16 +1964,16 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
                   Container(
                     width: 7,
                     height: 7,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFE11D48),
+                    decoration: BoxDecoration(
+                      color: _isMatchAbandoned ? const Color(0xFFEF4444) : const Color(0xFFE11D48),
                       shape: BoxShape.circle,
                     ),
                   ),
                   const SizedBox(width: 5),
                   Text(
-                    'LIVE',
+                    _isMatchAbandoned ? 'ABANDONED' : 'LIVE',
                     style: GoogleFonts.outfit(
-                      color: const Color(0xFFE11D48),
+                      color: _isMatchAbandoned ? const Color(0xFFEF4444) : const Color(0xFFE11D48),
                       fontWeight: FontWeight.w900,
                       fontSize: 11,
                       letterSpacing: 0.8,
@@ -1981,7 +1981,7 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    _match.format,
+                    _isMatchAbandoned && _abandonReason != null ? _abandonReason! : _match.format,
                     style: GoogleFonts.outfit(
                       color: AppColors.textSecondary,
                       fontSize: 11,

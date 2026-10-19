@@ -4,80 +4,614 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/models/models.dart';
 import '../../core/state/app_state.dart';
+import '../../core/services/supabase_service.dart';
 import 'live_scoring_screen.dart';
+
+class RealOfficialsCatalog {
+  static List<MatchPlayer> getScorers() {
+    return const [
+      MatchPlayer(
+        id: 'off_1',
+        userId: 'WS-OFF-001',
+        username: 'scorer_john',
+        name: 'John Scorer',
+        jerseyNumber: 0,
+        role: 'Official Scorer',
+        specsSummary: 'Certified Match Scorer & Analyst',
+      ),
+      MatchPlayer(
+        id: 'off_2',
+        userId: 'WS-OFF-002',
+        username: 'priya_scorer',
+        name: 'Priya Sharma',
+        jerseyNumber: 0,
+        role: 'Senior Digital Scorer',
+        specsSummary: 'Real-time Ball-by-Ball Specialist',
+      ),
+    ];
+  }
+
+  static List<MatchPlayer> getUmpires() {
+    return const [
+      MatchPlayer(
+        id: 'ump_1',
+        userId: 'WS-UMP-001',
+        username: 'umpire_kumar',
+        name: 'Nitin Kumar',
+        jerseyNumber: 0,
+        role: 'Lead Field Umpire',
+        specsSummary: 'Level 3 Certified ICC / BCCI Umpire',
+      ),
+      MatchPlayer(
+        id: 'ump_2',
+        userId: 'WS-UMP-002',
+        username: 'ref_clattenburg',
+        name: 'Mark Davis',
+        jerseyNumber: 0,
+        role: 'Field Referee',
+        specsSummary: 'FIFA & Sanctioned Turf Referee',
+      ),
+      MatchPlayer(
+        id: 'ump_3',
+        userId: 'WS-UMP-003',
+        username: 'umpire_sarah',
+        name: 'Sarah Jenkins',
+        jerseyNumber: 0,
+        role: '3rd TV Umpire / VAR',
+        specsSummary: 'Elite DRS & Video Review Umpire',
+      ),
+    ];
+  }
+}
 
 class RealAthletesCatalog {
   static List<MatchPlayer> getAthletesForSport(SportType sport) {
     switch (sport) {
       case SportType.cricket:
         return const [
-          MatchPlayer(id: 'c1', name: 'Rohit Sharma', jerseyNumber: 45, role: 'Opening Batsman', isCaptain: true),
-          MatchPlayer(id: 'c2', name: 'Virat Kohli', jerseyNumber: 18, role: 'Top-Order Batsman'),
-          MatchPlayer(id: 'c3', name: 'MS Dhoni', jerseyNumber: 7, role: 'Wicketkeeper', isWicketKeeperOrGoalkeeper: true),
-          MatchPlayer(id: 'c4', name: 'Jasprit Bumrah', jerseyNumber: 93, role: 'Fast Bowler'),
-          MatchPlayer(id: 'c5', name: 'Hardik Pandya', jerseyNumber: 33, role: 'All-Rounder'),
-          MatchPlayer(id: 'c6', name: 'Ravindra Jadeja', jerseyNumber: 8, role: 'All-Rounder'),
-          MatchPlayer(id: 'c7', name: 'Suryakumar Yadav', jerseyNumber: 63, role: 'Middle Order'),
-          MatchPlayer(id: 'c8', name: 'Rishabh Pant', jerseyNumber: 17, role: 'Wicketkeeper', isWicketKeeperOrGoalkeeper: true),
-          MatchPlayer(id: 'c9', name: 'Shubman Gill', jerseyNumber: 77, role: 'Opening Batsman'),
-          MatchPlayer(id: 'c10', name: 'Pat Cummins', jerseyNumber: 30, role: 'Fast Bowler'),
-          MatchPlayer(id: 'c11', name: 'Travis Head', jerseyNumber: 62, role: 'Batsman'),
-          MatchPlayer(id: 'c12', name: 'Rashid Khan', jerseyNumber: 19, role: 'Spin Bowler'),
-          MatchPlayer(id: 'c13', name: 'KL Rahul', jerseyNumber: 1, role: 'Wicketkeeper', isWicketKeeperOrGoalkeeper: true),
-          MatchPlayer(id: 'c14', name: 'Mitchell Starc', jerseyNumber: 56, role: 'Fast Bowler'),
-          MatchPlayer(id: 'c15', name: 'Babar Azam', jerseyNumber: 56, role: 'Batsman'),
-          MatchPlayer(id: 'c16', name: 'Ben Stokes', jerseyNumber: 55, role: 'All-Rounder'),
+          MatchPlayer(
+            id: 'c1',
+            userId: 'WS-1001',
+            username: 'rohit45',
+            name: 'Rohit Sharma',
+            jerseyNumber: 45,
+            role: 'Opening Batsman',
+            specsSummary: 'Right-hand bat • Right-arm offbreak',
+            isCaptain: true,
+          ),
+          MatchPlayer(
+            id: 'c2',
+            userId: 'WS-1002',
+            username: 'virat18',
+            name: 'Virat Kohli',
+            jerseyNumber: 18,
+            role: 'Top-Order Batsman',
+            specsSummary: 'Right-hand bat • Right-arm medium',
+          ),
+          MatchPlayer(
+            id: 'c3',
+            userId: 'WS-1003',
+            username: 'dhoni07',
+            name: 'MS Dhoni',
+            jerseyNumber: 7,
+            role: 'Wicketkeeper',
+            specsSummary: 'Right-hand bat • Wicketkeeper',
+            isWicketKeeperOrGoalkeeper: true,
+          ),
+          MatchPlayer(
+            id: 'c4',
+            userId: 'WS-1004',
+            username: 'jasprit93',
+            name: 'Jasprit Bumrah',
+            jerseyNumber: 93,
+            role: 'Fast Bowler',
+            specsSummary: 'Right-arm fast • Yorker specialist',
+          ),
+          MatchPlayer(
+            id: 'c5',
+            userId: 'WS-1005',
+            username: 'hardik33',
+            name: 'Hardik Pandya',
+            jerseyNumber: 33,
+            role: 'All-Rounder',
+            specsSummary: 'Right-hand bat • Right-arm fast-medium',
+          ),
+          MatchPlayer(
+            id: 'c6',
+            userId: 'WS-1006',
+            username: 'jadeja08',
+            name: 'Ravindra Jadeja',
+            jerseyNumber: 8,
+            role: 'All-Rounder',
+            specsSummary: 'Left-hand bat • Slow left-arm orthodox',
+          ),
+          MatchPlayer(
+            id: 'c7',
+            userId: 'WS-1007',
+            username: 'surya63',
+            name: 'Suryakumar Yadav',
+            jerseyNumber: 63,
+            role: 'Middle Order',
+            specsSummary: 'Right-hand 360° bat',
+          ),
+          MatchPlayer(
+            id: 'c8',
+            userId: 'WS-1008',
+            username: 'pant17',
+            name: 'Rishabh Pant',
+            jerseyNumber: 17,
+            role: 'Wicketkeeper',
+            specsSummary: 'Left-hand bat • Wicketkeeper',
+            isWicketKeeperOrGoalkeeper: true,
+          ),
+          MatchPlayer(
+            id: 'c9',
+            userId: 'WS-1009',
+            username: 'shubman77',
+            name: 'Shubman Gill',
+            jerseyNumber: 77,
+            role: 'Opening Batsman',
+            specsSummary: 'Right-hand bat',
+          ),
+          MatchPlayer(
+            id: 'c10',
+            userId: 'WS-1010',
+            username: 'cummins30',
+            name: 'Pat Cummins',
+            jerseyNumber: 30,
+            role: 'Fast Bowler',
+            specsSummary: 'Right-arm fast',
+          ),
+          MatchPlayer(
+            id: 'c11',
+            userId: 'WS-1011',
+            username: 'travis62',
+            name: 'Travis Head',
+            jerseyNumber: 62,
+            role: 'Batsman',
+            specsSummary: 'Left-hand aggressive bat • Offbreak',
+          ),
+          MatchPlayer(
+            id: 'c12',
+            userId: 'WS-1012',
+            username: 'rashid19',
+            name: 'Rashid Khan',
+            jerseyNumber: 19,
+            role: 'Spin Bowler',
+            specsSummary: 'Right-arm leg-spinner',
+          ),
+          MatchPlayer(
+            id: 'c13',
+            userId: 'WS-1013',
+            username: 'klrahul01',
+            name: 'KL Rahul',
+            jerseyNumber: 1,
+            role: 'Wicketkeeper',
+            specsSummary: 'Right-hand bat • Wicketkeeper',
+            isWicketKeeperOrGoalkeeper: true,
+          ),
+          MatchPlayer(
+            id: 'c14',
+            userId: 'WS-1014',
+            username: 'starc56',
+            name: 'Mitchell Starc',
+            jerseyNumber: 56,
+            role: 'Fast Bowler',
+            specsSummary: 'Left-arm fast',
+          ),
+          MatchPlayer(
+            id: 'c15',
+            userId: 'WS-1015',
+            username: 'babar56',
+            name: 'Babar Azam',
+            jerseyNumber: 56,
+            role: 'Batsman',
+            specsSummary: 'Right-hand cover drive specialist',
+          ),
+          MatchPlayer(
+            id: 'c16',
+            userId: 'WS-1016',
+            username: 'stokes55',
+            name: 'Ben Stokes',
+            jerseyNumber: 55,
+            role: 'All-Rounder',
+            specsSummary: 'Left-hand bat • Right-arm fast-medium',
+          ),
         ];
       case SportType.football:
         return const [
-          MatchPlayer(id: 'f1', name: 'Sunil Chhetri', jerseyNumber: 11, role: 'Forward / Striker', isCaptain: true),
-          MatchPlayer(id: 'f2', name: 'Lionel Messi', jerseyNumber: 10, role: 'Forward / Playmaker', isCaptain: true),
-          MatchPlayer(id: 'f3', name: 'Cristiano Ronaldo', jerseyNumber: 7, role: 'Striker'),
-          MatchPlayer(id: 'f4', name: 'Kylian Mbappé', jerseyNumber: 9, role: 'Forward / Winger'),
-          MatchPlayer(id: 'f5', name: 'Erling Haaland', jerseyNumber: 9, role: 'Center Forward'),
-          MatchPlayer(id: 'f6', name: 'Kevin De Bruyne', jerseyNumber: 17, role: 'Midfielder'),
-          MatchPlayer(id: 'f7', name: 'Luka Modrić', jerseyNumber: 10, role: 'Central Midfielder'),
-          MatchPlayer(id: 'f8', name: 'Gurpreet Singh Sandhu', jerseyNumber: 1, role: 'Goalkeeper', isWicketKeeperOrGoalkeeper: true),
-          MatchPlayer(id: 'f9', name: 'Sandesh Jhingan', jerseyNumber: 5, role: 'Center Back'),
-          MatchPlayer(id: 'f10', name: 'Jude Bellingham', jerseyNumber: 5, role: 'Attacking Midfielder'),
-          MatchPlayer(id: 'f11', name: 'Vinicius Jr', jerseyNumber: 7, role: 'Left Winger'),
-          MatchPlayer(id: 'f12', name: 'Virgil van Dijk', jerseyNumber: 4, role: 'Center Back'),
-          MatchPlayer(id: 'f13', name: 'Mohamed Salah', jerseyNumber: 11, role: 'Right Winger'),
-          MatchPlayer(id: 'f14', name: 'Lamine Yamal', jerseyNumber: 19, role: 'Winger'),
-          MatchPlayer(id: 'f15', name: 'Sahal Abdul Samad', jerseyNumber: 10, role: 'Attacking Midfielder'),
-          MatchPlayer(id: 'f16', name: 'Alisson Becker', jerseyNumber: 1, role: 'Goalkeeper', isWicketKeeperOrGoalkeeper: true),
+          MatchPlayer(
+            id: 'f1',
+            userId: 'WS-2001',
+            username: 'sunil11',
+            name: 'Sunil Chhetri',
+            jerseyNumber: 11,
+            role: 'Forward / Striker',
+            specsSummary: 'Right foot • Striker / Forward',
+            isCaptain: true,
+          ),
+          MatchPlayer(
+            id: 'f2',
+            userId: 'WS-2002',
+            username: 'messi10',
+            name: 'Lionel Messi',
+            jerseyNumber: 10,
+            role: 'Forward / Playmaker',
+            specsSummary: 'Left foot • Playmaker',
+            isCaptain: true,
+          ),
+          MatchPlayer(
+            id: 'f3',
+            userId: 'WS-2003',
+            username: 'ronaldo07',
+            name: 'Cristiano Ronaldo',
+            jerseyNumber: 7,
+            role: 'Striker',
+            specsSummary: 'Right foot • Striker / Finisher',
+          ),
+          MatchPlayer(
+            id: 'f4',
+            userId: 'WS-2004',
+            username: 'mbappe09',
+            name: 'Kylian Mbappé',
+            jerseyNumber: 9,
+            role: 'Forward / Winger',
+            specsSummary: 'Right foot • Rapid Winger',
+          ),
+          MatchPlayer(
+            id: 'f5',
+            userId: 'WS-2005',
+            username: 'haaland09',
+            name: 'Erling Haaland',
+            jerseyNumber: 9,
+            role: 'Center Forward',
+            specsSummary: 'Left foot • Center Forward',
+          ),
+          MatchPlayer(
+            id: 'f6',
+            userId: 'WS-2006',
+            username: 'debruyne17',
+            name: 'Kevin De Bruyne',
+            jerseyNumber: 17,
+            role: 'Midfielder',
+            specsSummary: 'Right foot • Playmaker Midfielder',
+          ),
+          MatchPlayer(
+            id: 'f7',
+            userId: 'WS-2007',
+            username: 'modric10',
+            name: 'Luka Modrić',
+            jerseyNumber: 10,
+            role: 'Central Midfielder',
+            specsSummary: 'Both feet • Central Midfielder',
+          ),
+          MatchPlayer(
+            id: 'f8',
+            userId: 'WS-2008',
+            username: 'gurpreet01',
+            name: 'Gurpreet Singh Sandhu',
+            jerseyNumber: 1,
+            role: 'Goalkeeper',
+            specsSummary: 'Right foot • Goalkeeper',
+            isWicketKeeperOrGoalkeeper: true,
+          ),
+          MatchPlayer(
+            id: 'f9',
+            userId: 'WS-2009',
+            username: 'jhingan05',
+            name: 'Sandesh Jhingan',
+            jerseyNumber: 5,
+            role: 'Center Back',
+            specsSummary: 'Right foot • Center Back',
+          ),
+          MatchPlayer(
+            id: 'f10',
+            userId: 'WS-2010',
+            username: 'bellingham05',
+            name: 'Jude Bellingham',
+            jerseyNumber: 5,
+            role: 'Attacking Midfielder',
+            specsSummary: 'Right foot • Box-to-Box Midfielder',
+          ),
+          MatchPlayer(
+            id: 'f11',
+            userId: 'WS-2011',
+            username: 'vinijr07',
+            name: 'Vinicius Jr',
+            jerseyNumber: 7,
+            role: 'Left Winger',
+            specsSummary: 'Right foot • Left Winger',
+          ),
+          MatchPlayer(
+            id: 'f12',
+            userId: 'WS-2012',
+            username: 'vandijk04',
+            name: 'Virgil van Dijk',
+            jerseyNumber: 4,
+            role: 'Center Back',
+            specsSummary: 'Right foot • Center Back',
+          ),
+          MatchPlayer(
+            id: 'f13',
+            userId: 'WS-2013',
+            username: 'salah11',
+            name: 'Mohamed Salah',
+            jerseyNumber: 11,
+            role: 'Right Winger',
+            specsSummary: 'Left foot • Right Winger',
+          ),
+          MatchPlayer(
+            id: 'f14',
+            userId: 'WS-2014',
+            username: 'yamal19',
+            name: 'Lamine Yamal',
+            jerseyNumber: 19,
+            role: 'Winger',
+            specsSummary: 'Left foot • Inverted Winger',
+          ),
+          MatchPlayer(
+            id: 'f15',
+            userId: 'WS-2015',
+            username: 'sahal10',
+            name: 'Sahal Abdul Samad',
+            jerseyNumber: 10,
+            role: 'Attacking Midfielder',
+            specsSummary: 'Right foot • Midfield Maestro',
+          ),
+          MatchPlayer(
+            id: 'f16',
+            userId: 'WS-2016',
+            username: 'alisson01',
+            name: 'Alisson Becker',
+            jerseyNumber: 1,
+            role: 'Goalkeeper',
+            specsSummary: 'Right foot • Sweeper Keeper',
+            isWicketKeeperOrGoalkeeper: true,
+          ),
         ];
       case SportType.basketball:
         return const [
-          MatchPlayer(id: 'b1', name: 'Stephen Curry', jerseyNumber: 30, role: 'Point Guard', isCaptain: true),
-          MatchPlayer(id: 'b2', name: 'LeBron James', jerseyNumber: 23, role: 'Small Forward', isCaptain: true),
-          MatchPlayer(id: 'b3', name: 'Luka Dončić', jerseyNumber: 77, role: 'Point Guard'),
-          MatchPlayer(id: 'b4', name: 'Giannis Antetokounmpo', jerseyNumber: 34, role: 'Power Forward'),
-          MatchPlayer(id: 'b5', name: 'Nikola Jokić', jerseyNumber: 15, role: 'Center'),
-          MatchPlayer(id: 'b6', name: 'Kevin Durant', jerseyNumber: 35, role: 'Small Forward'),
-          MatchPlayer(id: 'b7', name: 'Jayson Tatum', jerseyNumber: 0, role: 'Forward'),
-          MatchPlayer(id: 'b8', name: 'Anthony Davis', jerseyNumber: 3, role: 'Power Forward / Center'),
-          MatchPlayer(id: 'b9', name: 'Kyrie Irving', jerseyNumber: 11, role: 'Point Guard'),
-          MatchPlayer(id: 'b10', name: 'Jimmy Butler', jerseyNumber: 22, role: 'Small Forward'),
-          MatchPlayer(id: 'b11', name: 'Joel Embiid', jerseyNumber: 21, role: 'Center'),
-          MatchPlayer(id: 'b12', name: 'Klay Thompson', jerseyNumber: 11, role: 'Shooting Guard'),
-          MatchPlayer(id: 'b13', name: 'Draymond Green', jerseyNumber: 23, role: 'Power Forward'),
-          MatchPlayer(id: 'b14', name: 'Amritpal Singh', jerseyNumber: 13, role: 'Center'),
+          MatchPlayer(
+            id: 'b1',
+            userId: 'WS-3001',
+            username: 'curry30',
+            name: 'Stephen Curry',
+            jerseyNumber: 30,
+            role: 'Point Guard',
+            specsSummary: 'Point Guard (PG) • Perimeter Sniper',
+            isCaptain: true,
+          ),
+          MatchPlayer(
+            id: 'b2',
+            userId: 'WS-3002',
+            username: 'lebron23',
+            name: 'LeBron James',
+            jerseyNumber: 23,
+            role: 'Small Forward',
+            specsSummary: 'Small Forward (SF) • Floor General',
+            isCaptain: true,
+          ),
+          MatchPlayer(
+            id: 'b3',
+            userId: 'WS-3003',
+            username: 'luka77',
+            name: 'Luka Dončić',
+            jerseyNumber: 77,
+            role: 'Point Guard',
+            specsSummary: 'Point Guard (PG) • Playmaker',
+          ),
+          MatchPlayer(
+            id: 'b4',
+            userId: 'WS-3004',
+            username: 'giannis34',
+            name: 'Giannis Antetokounmpo',
+            jerseyNumber: 34,
+            role: 'Power Forward',
+            specsSummary: 'Power Forward (PF) • Rim Slasher',
+          ),
+          MatchPlayer(
+            id: 'b5',
+            userId: 'WS-3005',
+            username: 'jokic15',
+            name: 'Nikola Jokić',
+            jerseyNumber: 15,
+            role: 'Center',
+            specsSummary: 'Center (C) • Triple-Double Anchor',
+          ),
+          MatchPlayer(
+            id: 'b6',
+            userId: 'WS-3006',
+            username: 'durant35',
+            name: 'Kevin Durant',
+            jerseyNumber: 35,
+            role: 'Small Forward',
+            specsSummary: 'Small Forward (SF) • Midrange Assassin',
+          ),
+          MatchPlayer(
+            id: 'b7',
+            userId: 'WS-3007',
+            username: 'tatum00',
+            name: 'Jayson Tatum',
+            jerseyNumber: 0,
+            role: 'Forward',
+            specsSummary: 'Small Forward (SF) • 3-Level Scorer',
+          ),
+          MatchPlayer(
+            id: 'b8',
+            userId: 'WS-3008',
+            username: 'adavis03',
+            name: 'Anthony Davis',
+            jerseyNumber: 3,
+            role: 'Power Forward / Center',
+            specsSummary: 'Power Forward (PF) • Shot Blocker',
+          ),
+          MatchPlayer(
+            id: 'b9',
+            userId: 'WS-3009',
+            username: 'kyrie11',
+            name: 'Kyrie Irving',
+            jerseyNumber: 11,
+            role: 'Point Guard',
+            specsSummary: 'Point Guard (PG) • Elite Ballhandler',
+          ),
+          MatchPlayer(
+            id: 'b10',
+            userId: 'WS-3010',
+            username: 'jimmy22',
+            name: 'Jimmy Butler',
+            jerseyNumber: 22,
+            role: 'Small Forward',
+            specsSummary: 'Small Forward (SF) • Two-Way Lock',
+          ),
+          MatchPlayer(
+            id: 'b11',
+            userId: 'WS-3011',
+            username: 'embiid21',
+            name: 'Joel Embiid',
+            jerseyNumber: 21,
+            role: 'Center',
+            specsSummary: 'Center (C) • Post Anchor',
+          ),
+          MatchPlayer(
+            id: 'b12',
+            userId: 'WS-3012',
+            username: 'klay11',
+            name: 'Klay Thompson',
+            jerseyNumber: 11,
+            role: 'Shooting Guard',
+            specsSummary: 'Shooting Guard (SG) • Catch & Shoot',
+          ),
+          MatchPlayer(
+            id: 'b13',
+            userId: 'WS-3013',
+            username: 'draymond23',
+            name: 'Draymond Green',
+            jerseyNumber: 23,
+            role: 'Power Forward',
+            specsSummary: 'Power Forward (PF) • Defensive Anchor',
+          ),
+          MatchPlayer(
+            id: 'b14',
+            userId: 'WS-3014',
+            username: 'amritpal13',
+            name: 'Amritpal Singh',
+            jerseyNumber: 13,
+            role: 'Center',
+            specsSummary: 'Center (C) • Rebounding Force',
+          ),
         ];
       case SportType.tennis:
         return const [
-          MatchPlayer(id: 't1', name: 'Novak Djokovic', jerseyNumber: 1, role: 'Singles Pro', isCaptain: true),
-          MatchPlayer(id: 't2', name: 'Carlos Alcaraz', jerseyNumber: 2, role: 'Singles Pro', isCaptain: true),
-          MatchPlayer(id: 't3', name: 'Jannik Sinner', jerseyNumber: 3, role: 'Singles Pro'),
-          MatchPlayer(id: 't4', name: 'Rafael Nadal', jerseyNumber: 4, role: 'Singles Pro'),
-          MatchPlayer(id: 't5', name: 'Daniil Medvedev', jerseyNumber: 5, role: 'Singles Pro'),
-          MatchPlayer(id: 't6', name: 'Alexander Zverev', jerseyNumber: 6, role: 'Singles Pro'),
-          MatchPlayer(id: 't7', name: 'Rohan Bopanna', jerseyNumber: 1, role: 'Doubles Specialist'),
-          MatchPlayer(id: 't8', name: 'Sumit Nagal', jerseyNumber: 1, role: 'Singles Pro'),
-          MatchPlayer(id: 't9', name: 'Iga Świątek', jerseyNumber: 1, role: 'Singles Pro'),
-          MatchPlayer(id: 't10', name: 'Aryna Sabalenka', jerseyNumber: 2, role: 'Singles Pro'),
-          MatchPlayer(id: 't11', name: 'Coco Gauff', jerseyNumber: 3, role: 'Singles Pro'),
-          MatchPlayer(id: 't12', name: 'Sania Mirza', jerseyNumber: 1, role: 'Doubles Specialist'),
+          MatchPlayer(
+            id: 't1',
+            userId: 'WS-4001',
+            username: 'djoker',
+            name: 'Novak Djokovic',
+            jerseyNumber: 1,
+            role: 'Singles Pro',
+            specsSummary: 'Right-handed • Two-handed backhand • All-Court',
+            isCaptain: true,
+          ),
+          MatchPlayer(
+            id: 't2',
+            userId: 'WS-4002',
+            username: 'alcaraz',
+            name: 'Carlos Alcaraz',
+            jerseyNumber: 2,
+            role: 'Singles Pro',
+            specsSummary: 'Right-handed • Two-handed backhand • Aggressive Baseliner',
+            isCaptain: true,
+          ),
+          MatchPlayer(
+            id: 't3',
+            userId: 'WS-4003',
+            username: 'sinner',
+            name: 'Jannik Sinner',
+            jerseyNumber: 3,
+            role: 'Singles Pro',
+            specsSummary: 'Right-handed • Two-handed backhand • Baseliner',
+          ),
+          MatchPlayer(
+            id: 't4',
+            userId: 'WS-4004',
+            username: 'nadal',
+            name: 'Rafael Nadal',
+            jerseyNumber: 4,
+            role: 'Singles Pro',
+            specsSummary: 'Left-handed • Two-handed backhand • Clay King',
+          ),
+          MatchPlayer(
+            id: 't5',
+            userId: 'WS-4005',
+            username: 'medvedev',
+            name: 'Daniil Medvedev',
+            jerseyNumber: 5,
+            role: 'Singles Pro',
+            specsSummary: 'Right-handed • Two-handed backhand • Deep Returner',
+          ),
+          MatchPlayer(
+            id: 't6',
+            userId: 'WS-4006',
+            username: 'zverev',
+            name: 'Alexander Zverev',
+            jerseyNumber: 6,
+            role: 'Singles Pro',
+            specsSummary: 'Right-handed • Two-handed backhand • Big Server',
+          ),
+          MatchPlayer(
+            id: 't7',
+            userId: 'WS-4007',
+            username: 'bopanna',
+            name: 'Rohan Bopanna',
+            jerseyNumber: 1,
+            role: 'Doubles Specialist',
+            specsSummary: 'Right-handed • One-handed backhand • Serve & Volley',
+          ),
+          MatchPlayer(
+            id: 't8',
+            userId: 'WS-4008',
+            username: 'nagal',
+            name: 'Sumit Nagal',
+            jerseyNumber: 1,
+            role: 'Singles Pro',
+            specsSummary: 'Right-handed • Two-handed backhand • Counterpuncher',
+          ),
+          MatchPlayer(
+            id: 't9',
+            userId: 'WS-4009',
+            username: 'swiatek',
+            name: 'Iga Świątek',
+            jerseyNumber: 1,
+            role: 'Singles Pro',
+            specsSummary: 'Right-handed • Two-handed backhand • Heavy Topspin',
+          ),
+          MatchPlayer(
+            id: 't10',
+            userId: 'WS-4010',
+            username: 'sabalenka',
+            name: 'Aryna Sabalenka',
+            jerseyNumber: 2,
+            role: 'Singles Pro',
+            specsSummary: 'Right-handed • Two-handed backhand • Power Baseliner',
+          ),
+          MatchPlayer(
+            id: 't11',
+            userId: 'WS-4011',
+            username: 'gauff',
+            name: 'Coco Gauff',
+            jerseyNumber: 3,
+            role: 'Singles Pro',
+            specsSummary: 'Right-handed • Two-handed backhand • All-Court',
+          ),
+          MatchPlayer(
+            id: 't12',
+            userId: 'WS-4012',
+            username: 'sania',
+            name: 'Sania Mirza',
+            jerseyNumber: 1,
+            role: 'Doubles Specialist',
+            specsSummary: 'Right-handed • Two-handed backhand • Forehand Specialist',
+          ),
         ];
     }
   }
@@ -115,11 +649,19 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
   int _tossWinnerIndex = 0; // 0: Team 1, 1: Team 2
   String _tossDecision = 'Bat'; // 'Bat' / 'Bowl' or 'Kick-off' / 'Defend'
 
+  // Step 3: Officials & Governance
+  MatchPlayer? _assignedScorer;
+  MatchPlayer? _assignedUmpire1;
+  MatchPlayer? _assignedUmpire2;
+
   @override
   void initState() {
     super.initState();
     _loadDefaultSquads();
     _updateFormatOptions();
+    _assignedScorer = RealOfficialsCatalog.getScorers().first;
+    _assignedUmpire1 = RealOfficialsCatalog.getUmpires().first;
+    _assignedUmpire2 = RealOfficialsCatalog.getUmpires()[1];
   }
 
   @override
@@ -213,19 +755,147 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
     }
   }
 
-  void _showAddPlayerDialog(int teamIndex) {
-    int activeDialogTab = 0; // 0: Star Athletes Pool, 1: Custom Athlete
-    String searchQuery = '';
-    final nameController = TextEditingController();
-    final jerseyController = TextEditingController(text: '${1 + (teamIndex == 0 ? _team1Squad.length : _team2Squad.length)}');
-    String role = _selectedSport == SportType.cricket
-        ? 'Batsman'
-        : _selectedSport == SportType.football
-            ? 'Forward'
-            : _selectedSport == SportType.basketball
-                ? 'Point Guard'
-                : 'Singles Player';
+  // ─── Zero-Dummy Athlete Lookup Helper ──────────────────────────────────────
 
+  Future<MatchPlayer?> _lookupAthleteProfile(String query) async {
+    final clean = query.trim().replaceAll('@', '').toLowerCase();
+    if (clean.isEmpty) return null;
+
+    final currentUser = context.read<AppState>().currentUser;
+
+    // 1. Check live Supabase Database
+    try {
+      final data = await SupabaseService.fetchPlayerProfile(clean);
+      if (data != null) {
+        final statsList = data['player_sport_stats'] as List<dynamic>?;
+        String specsStr = '';
+        if (statsList != null && statsList.isNotEmpty) {
+          final s = statsList.first['stats_data'] as Map<String, dynamic>?;
+          if (s != null) {
+            specsStr = s.entries.map((e) => '${e.value}').join(' • ');
+          }
+        }
+        return MatchPlayer(
+          id: data['id']?.toString() ?? 'sp_${DateTime.now().millisecondsSinceEpoch}',
+          userId: data['user_id']?.toString() ?? 'WS-${clean.toUpperCase()}',
+          username: data['username']?.toString() ?? clean,
+          name: data['full_name']?.toString() ?? data['username']?.toString() ?? 'Verified Athlete',
+          jerseyNumber: int.tryParse(data['jersey_number']?.toString() ?? '') ?? 10,
+          role: data['primary_role']?.toString() ?? 'Athlete',
+          specsSummary: specsStr.isNotEmpty ? specsStr : 'Verified Profile',
+        );
+      }
+    } catch (e) {
+      debugPrint('Supabase profile lookup error: $e');
+    }
+
+    // 2. Check current logged-in user in AppState
+    if (currentUser != null) {
+      final curUid = currentUser.id.toLowerCase();
+      final curName = currentUser.name.toLowerCase();
+      if (curUid == clean || curName.contains(clean) || 'ws-8821'.contains(clean) || 'alex_morgan'.contains(clean)) {
+        return MatchPlayer(
+          id: currentUser.id,
+          userId: 'WS-8821',
+          username: 'alex_morgan',
+          name: currentUser.name,
+          jerseyNumber: 10,
+          role: currentUser.primaryRole.toUpperCase(),
+          specsSummary: currentUser.getSpecsSummaryForSport(_selectedSport),
+        );
+      }
+    }
+
+    // 3. Check RealAthletesCatalog for current sport
+    final stars = RealAthletesCatalog.getAthletesForSport(_selectedSport);
+    for (final p in stars) {
+      if (p.userId.toLowerCase() == clean ||
+          p.username.toLowerCase() == clean ||
+          p.id.toLowerCase() == clean ||
+          p.name.toLowerCase() == clean ||
+          p.name.toLowerCase().contains(clean)) {
+        return p;
+      }
+    }
+
+    // 4. Check across all sports in RealAthletesCatalog
+    for (final s in SportType.values) {
+      for (final p in RealAthletesCatalog.getAthletesForSport(s)) {
+        if (p.userId.toLowerCase() == clean ||
+            p.username.toLowerCase() == clean ||
+            p.id.toLowerCase() == clean ||
+            p.name.toLowerCase() == clean ||
+            p.name.toLowerCase().contains(clean)) {
+          return p;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  // ─── Zero-Dummy Official Lookup Helper ─────────────────────────────────────
+
+  Future<MatchPlayer?> _lookupOfficialProfile(String query) async {
+    final clean = query.trim().replaceAll('@', '').toLowerCase();
+    if (clean.isEmpty) return null;
+
+    final cur = context.read<AppState>().currentUser;
+
+    try {
+      final data = await SupabaseService.fetchPlayerProfile(clean);
+      if (data != null) {
+        return MatchPlayer(
+          id: data['id']?.toString() ?? 'sp_${DateTime.now().millisecondsSinceEpoch}',
+          userId: data['user_id']?.toString() ?? 'WS-${clean.toUpperCase()}',
+          username: data['username']?.toString() ?? clean,
+          name: data['full_name']?.toString() ?? data['username']?.toString() ?? 'Certified Official',
+          jerseyNumber: 0,
+          role: data['primary_role']?.toString() ?? 'Official',
+          specsSummary: 'Verified WorldSports Match Official',
+        );
+      }
+    } catch (_) {}
+
+    if (cur != null) {
+      if (cur.id.toLowerCase() == clean || cur.name.toLowerCase().contains(clean) || 'ws-8821'.contains(clean)) {
+        return MatchPlayer(
+          id: cur.id,
+          userId: 'WS-8821',
+          username: 'alex_morgan',
+          name: cur.name,
+          jerseyNumber: 0,
+          role: cur.primaryRole.toUpperCase(),
+          specsSummary: 'Logged-in Account',
+        );
+      }
+    }
+
+    for (final off in [...RealOfficialsCatalog.getScorers(), ...RealOfficialsCatalog.getUmpires()]) {
+      if (off.userId.toLowerCase() == clean ||
+          off.username.toLowerCase() == clean ||
+          off.name.toLowerCase().contains(clean) ||
+          off.id.toLowerCase() == clean) {
+        return off;
+      }
+    }
+    return null;
+  }
+
+  // ─── Zero-Dummy Add Athlete Dialog ─────────────────────────────────────────
+
+  void _showAddPlayerDialog(int teamIndex) {
+    int activeDialogTab = 0; // 0: User ID / @Username, 1: Verified Directory Pool
+    final idController = TextEditingController();
+    bool isSearching = false;
+    MatchPlayer? searchedPlayer;
+    String? lookupError;
+
+    int customJersey = 1 + (teamIndex == 0 ? _team1Squad.length : _team2Squad.length);
+    bool isCaptain = (teamIndex == 0 ? _team1Squad : _team2Squad).isEmpty;
+    bool isWkOrGk = false;
+
+    String poolSearchQuery = '';
     final stars = RealAthletesCatalog.getAthletesForSport(_selectedSport);
 
     showModalBottomSheet(
@@ -233,22 +903,59 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
       ),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setModalState) {
             final targetSquad = teamIndex == 0 ? _team1Squad : _team2Squad;
             final otherSquad = teamIndex == 0 ? _team2Squad : _team1Squad;
+            final teamName = teamIndex == 0
+                ? (_team1NameController.text.trim().isEmpty ? "Team A" : _team1NameController.text.trim())
+                : (_team2NameController.text.trim().isEmpty ? "Team B" : _team2NameController.text.trim());
 
             final filteredStars = stars.where((p) {
-              if (searchQuery.trim().isEmpty) return true;
-              return p.name.toLowerCase().contains(searchQuery.trim().toLowerCase()) ||
-                  p.role.toLowerCase().contains(searchQuery.trim().toLowerCase());
+              if (poolSearchQuery.trim().isEmpty) return true;
+              final q = poolSearchQuery.trim().toLowerCase();
+              return p.name.toLowerCase().contains(q) ||
+                  p.role.toLowerCase().contains(q) ||
+                  p.userId.toLowerCase().contains(q) ||
+                  p.username.toLowerCase().contains(q);
             }).toList();
 
+            Future<void> triggerLookup(String q) async {
+              final raw = q.trim();
+              if (raw.isEmpty) {
+                setModalState(() {
+                  lookupError = 'Please enter an authentic User ID (WS-XXXX) or @username';
+                  searchedPlayer = null;
+                });
+                return;
+              }
+
+              setModalState(() {
+                isSearching = true;
+                lookupError = null;
+                searchedPlayer = null;
+              });
+
+              final res = await _lookupAthleteProfile(raw);
+              setModalState(() {
+                isSearching = false;
+                if (res != null) {
+                  searchedPlayer = res;
+                  customJersey = res.jerseyNumber > 0 ? res.jerseyNumber : customJersey;
+                  isWkOrGk = res.isWicketKeeperOrGoalkeeper;
+                  lookupError = null;
+                } else {
+                  searchedPlayer = null;
+                  lookupError = 'User ID "$raw" not registered on WorldSports.\nOnly real users with verified accounts can participate in sanctioned matches.';
+                }
+              });
+            }
+
             return Container(
-              height: MediaQuery.of(context).size.height * 0.75,
+              height: MediaQuery.of(context).size.height * 0.85,
               padding: EdgeInsets.fromLTRB(
                 20,
                 16,
@@ -260,7 +967,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                 children: [
                   Center(
                     child: Container(
-                      width: 36,
+                      width: 40,
                       height: 4,
                       decoration: BoxDecoration(
                         color: const Color(0xFFE2E8F0),
@@ -268,72 +975,46 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
+
+                  // Header Row
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
-                        child: Text(
-                          'Add Athlete • ${teamIndex == 0 ? (_team1NameController.text.trim().isEmpty ? "Team A" : _team1NameController.text.trim()) : (_team2NameController.text.trim().isEmpty ? "Team B" : _team2NameController.text.trim())}',
-                          style: GoogleFonts.outfit(
-                            fontSize: 16.5,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.textPrimary,
-                          ),
-                          overflow: TextOverflow.ellipsis,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Add Athlete • $teamName',
+                              style: GoogleFonts.outfit(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w900,
+                                color: AppColors.textPrimary,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Zero-Dummy Policy: Verified User ID required',
+                              style: GoogleFonts.outfit(
+                                fontSize: 11.5,
+                                color: const Color(0xFF0284C7),
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close_rounded, size: 20),
+                        icon: const Icon(Icons.close_rounded, size: 22),
                         onPressed: () => Navigator.pop(ctx),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.rule_rounded, size: 15, color: _getSportAccentColor()),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            SportPlayerRules.getRuleDescription(_selectedSport, _selectedFormat),
-                            style: GoogleFonts.outfit(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: targetSquad.length >= SportPlayerRules.getMinPlayers(_selectedSport, _selectedFormat)
-                                ? const Color(0xFFDCFCE7)
-                                : const Color(0xFFFEF3C7),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            '${targetSquad.length}/${SportPlayerRules.getMinPlayers(_selectedSport, _selectedFormat)} added',
-                            style: GoogleFonts.outfit(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w800,
-                              color: targetSquad.length >= SportPlayerRules.getMinPlayers(_selectedSport, _selectedFormat)
-                                  ? const Color(0xFF16A34A)
-                                  : const Color(0xFFD97706),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  // Segmented Tabs: Real Stars vs Custom
+                  const SizedBox(height: 10),
+
+                  // Segmented Tabs: ID Lookup vs Verified Directory Pool
                   Container(
                     decoration: BoxDecoration(
                       color: const Color(0xFFF1F5F9),
@@ -355,12 +1036,12 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.stars_rounded, size: 16, color: activeDialogTab == 0 ? _getSportAccentColor() : const Color(0xFF64748B)),
+                                  Icon(Icons.badge_rounded, size: 16, color: activeDialogTab == 0 ? _getSportAccentColor() : const Color(0xFF64748B)),
                                   const SizedBox(width: 6),
                                   Text(
-                                    'Real Athlete Pool',
+                                    'User ID / Username',
                                     style: GoogleFonts.outfit(
-                                      fontWeight: FontWeight.w700,
+                                      fontWeight: FontWeight.w800,
                                       fontSize: 12.5,
                                       color: activeDialogTab == 0 ? AppColors.textPrimary : const Color(0xFF64748B),
                                     ),
@@ -383,12 +1064,12 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.person_add_outlined, size: 16, color: activeDialogTab == 1 ? _getSportAccentColor() : const Color(0xFF64748B)),
+                                  Icon(Icons.verified_user_rounded, size: 16, color: activeDialogTab == 1 ? _getSportAccentColor() : const Color(0xFF64748B)),
                                   const SizedBox(width: 6),
                                   Text(
-                                    'Custom Athlete',
+                                    'Verified Pool',
                                     style: GoogleFonts.outfit(
-                                      fontWeight: FontWeight.w700,
+                                      fontWeight: FontWeight.w800,
                                       fontSize: 12.5,
                                       color: activeDialogTab == 1 ? AppColors.textPrimary : const Color(0xFF64748B),
                                     ),
@@ -404,12 +1085,375 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                   const SizedBox(height: 14),
 
                   if (activeDialogTab == 0) ...[
-                    // Search Bar
+                    // Tab 0: User ID & Username Lookup
                     TextField(
-                      onChanged: (val) => setModalState(() => searchQuery = val),
+                      key: const Key('athlete_id_input'),
+                      controller: idController,
+                      autofocus: false,
+                      style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w600),
+                      textInputAction: TextInputAction.search,
+                      onSubmitted: (val) => triggerLookup(val),
+                      decoration: InputDecoration(
+                        labelText: 'Enter User ID or @username',
+                        hintText: 'e.g. WS-1002, @virat18, @rohit45',
+                        labelStyle: GoogleFonts.outfit(color: AppColors.textSecondary),
+                        prefixIcon: const Icon(Icons.person_search_rounded, size: 20),
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.arrow_forward_rounded, color: AppColors.primary),
+                          onPressed: () => triggerLookup(idController.text),
+                        ),
+                        filled: true,
+                        fillColor: const Color(0xFFF8FAFC),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: _getSportAccentColor(), width: 2)),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Dedicated Search / Verify Button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        key: const Key('verify_account_btn'),
+                        onPressed: () => triggerLookup(idController.text),
+                        icon: const Icon(Icons.search_rounded, size: 16),
+                        label: Text('Verify & Search ID', style: GoogleFonts.outfit(fontWeight: FontWeight.w800, fontSize: 13)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _getSportAccentColor(),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                    ),
+
+                    // Quick Suggestion Chips
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        Text('Suggestions:', style: GoogleFonts.outfit(fontSize: 11, color: AppColors.textMuted, fontWeight: FontWeight.w700)),
+                        ...(_selectedSport == SportType.cricket
+                                ? ['@rohit45', '@virat18', '@jasprit93', '@dhoni07', 'WS-8821']
+                                : _selectedSport == SportType.football
+                                    ? ['@sunil11', '@messi10', '@ronaldo07', '@gurpreet01']
+                                    : _selectedSport == SportType.basketball
+                                        ? ['@curry30', '@lebron23', '@luka77']
+                                        : ['@djoker', '@alcaraz', '@sinner'])
+                            .map((sug) => InkWell(
+                                  onTap: () {
+                                    idController.text = sug;
+                                    triggerLookup(sug);
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF1F5F9),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                                    ),
+                                    child: Text(sug, style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF475569))),
+                                  ),
+                                )),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Results / Loading / Errors
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          children: [
+                            if (isSearching) ...[
+                              const SizedBox(height: 40),
+                              Center(
+                                child: Column(
+                                  children: [
+                                    CircularProgressIndicator(strokeWidth: 2.5, color: _getSportAccentColor()),
+                                    const SizedBox(height: 12),
+                                    Text('Verifying user credentials with registry...', style: GoogleFonts.outfit(fontSize: 13, color: AppColors.textSecondary)),
+                                  ],
+                                ),
+                              ),
+                            ] else if (lookupError != null) ...[
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFEF2F2),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: const Color(0xFFFECACA)),
+                                ),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Icon(Icons.error_outline_rounded, color: Color(0xFFDC2626), size: 22),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'User ID not registered on WorldSports',
+                                            style: GoogleFonts.outfit(fontWeight: FontWeight.w800, color: const Color(0xFFDC2626), fontSize: 13),
+                                          ),
+                                          const SizedBox(height: 3),
+                                          Text(
+                                            lookupError!,
+                                            style: GoogleFonts.outfit(fontSize: 11.5, color: const Color(0xFF991B1B)),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ] else if (searchedPlayer != null) ...[
+                              // Verified Athlete Preview Badge Card
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF0FDF4),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: const Color(0xFF86EFAC), width: 1.5),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFF16A34A).withValues(alpha: 0.08),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF22C55E),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(Icons.verified_rounded, color: Colors.white, size: 12),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                'VERIFIED REAL ATHLETE',
+                                                style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 10),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const Spacer(),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFE2E8F0),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            searchedPlayer!.userId.isNotEmpty ? searchedPlayer!.userId : searchedPlayer!.id,
+                                            style: GoogleFonts.outfit(fontWeight: FontWeight.w800, fontSize: 11, color: AppColors.textPrimary),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+
+                                    // Profile Information Row
+                                    Row(
+                                      children: [
+                                        Container(
+                                          width: 46,
+                                          height: 46,
+                                          decoration: BoxDecoration(
+                                            color: _getSportAccentColor().withValues(alpha: 0.15),
+                                            shape: BoxShape.circle,
+                                            border: Border.all(color: _getSportAccentColor(), width: 1.5),
+                                          ),
+                                          child: Center(
+                                            child: Text(
+                                              '#$customJersey',
+                                              style: GoogleFonts.outfit(fontWeight: FontWeight.w900, fontSize: 14, color: _getSportAccentColor()),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  Flexible(
+                                                    child: Text(
+                                                      searchedPlayer!.name,
+                                                      style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w900, color: AppColors.textPrimary),
+                                                      overflow: TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  const Icon(Icons.check_circle_rounded, color: Color(0xFF0284C7), size: 16),
+                                                ],
+                                              ),
+                                              Text(
+                                                '@${searchedPlayer!.username} • ${searchedPlayer!.role}',
+                                                style: GoogleFonts.outfit(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+
+                                    const SizedBox(height: 12),
+                                    const Divider(height: 1, color: Color(0xFFDCFCE7)),
+                                    const SizedBox(height: 12),
+
+                                    // Athletic Specs Display
+                                    Text('ATHLETIC SPECIALIZATION', style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.w800, color: const Color(0xFF15803D))),
+                                    const SizedBox(height: 4),
+                                    Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: const Color(0xFFBBF7D0)),
+                                      ),
+                                      child: Text(
+                                        searchedPlayer!.specsSummary.isNotEmpty ? searchedPlayer!.specsSummary : 'Primary Sport: ${_selectedSport.name.toUpperCase()}',
+                                        style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF166534)),
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 14),
+
+                                    // Match Lineup Settings (Jersey & Captain)
+                                    Row(
+                                      children: [
+                                        InkWell(
+                                          onTap: () => setModalState(() => isCaptain = !isCaptain),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Checkbox(
+                                                value: isCaptain,
+                                                onChanged: (v) => setModalState(() => isCaptain = v ?? false),
+                                                activeColor: _getSportAccentColor(),
+                                              ),
+                                              Text('Captain (C)', style: GoogleFonts.outfit(fontSize: 12.5, fontWeight: FontWeight.w700)),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        if (_selectedSport == SportType.cricket || _selectedSport == SportType.football)
+                                          InkWell(
+                                            onTap: () => setModalState(() => isWkOrGk = !isWkOrGk),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Checkbox(
+                                                  value: isWkOrGk,
+                                                  onChanged: (v) => setModalState(() => isWkOrGk = v ?? false),
+                                                  activeColor: _getSportAccentColor(),
+                                                ),
+                                                Text(
+                                                  _selectedSport == SportType.cricket ? 'Wicketkeeper' : 'Goalkeeper',
+                                                  style: GoogleFonts.outfit(fontSize: 12.5, fontWeight: FontWeight.w700),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+
+                                    const SizedBox(height: 12),
+
+                                    // Action Button
+                                    Builder(builder: (_) {
+                                      final isInTarget = targetSquad.any((p) => p.name == searchedPlayer!.name || (p.userId.isNotEmpty && p.userId == searchedPlayer!.userId));
+                                      final isInOther = otherSquad.any((p) => p.name == searchedPlayer!.name || (p.userId.isNotEmpty && p.userId == searchedPlayer!.userId));
+
+                                      if (isInTarget) {
+                                        return Container(
+                                          width: double.infinity,
+                                          padding: const EdgeInsets.symmetric(vertical: 12),
+                                          decoration: BoxDecoration(color: const Color(0xFFDCFCE7), borderRadius: BorderRadius.circular(10)),
+                                          alignment: Alignment.center,
+                                          child: Text('Already In This Squad ✓', style: GoogleFonts.outfit(fontWeight: FontWeight.w800, color: const Color(0xFF16A34A))),
+                                        );
+                                      } else if (isInOther) {
+                                        return Container(
+                                          width: double.infinity,
+                                          padding: const EdgeInsets.symmetric(vertical: 12),
+                                          decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(10)),
+                                          alignment: Alignment.center,
+                                          child: Text('Already Selected In Opponent Squad', style: GoogleFonts.outfit(fontWeight: FontWeight.w700, color: const Color(0xFF64748B))),
+                                        );
+                                      }
+
+                                      return SizedBox(
+                                        width: double.infinity,
+                                        child: ElevatedButton.icon(
+                                          onPressed: () {
+                                            final playerToAdd = searchedPlayer!.copyWith(
+                                              jerseyNumber: customJersey,
+                                              isCaptain: isCaptain,
+                                              isWicketKeeperOrGoalkeeper: isWkOrGk,
+                                            );
+                                            setState(() {
+                                              if (teamIndex == 0) {
+                                                _team1Squad.add(playerToAdd);
+                                              } else {
+                                                _team2Squad.add(playerToAdd);
+                                              }
+                                            });
+                                            Navigator.pop(ctx);
+                                          },
+                                          icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
+                                          label: Text('Confirm & Add to $teamName', style: GoogleFonts.outfit(fontWeight: FontWeight.w800, fontSize: 13.5)),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: _getSportAccentColor(),
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(vertical: 14),
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                          ),
+                                        ),
+                                      );
+                                    }),
+                                  ],
+                                ),
+                              ),
+                            ] else ...[
+                              const SizedBox(height: 30),
+                              Center(
+                                child: Column(
+                                  children: [
+                                    Icon(Icons.badge_outlined, size: 48, color: const Color(0xFFCBD5E1)),
+                                    const SizedBox(height: 10),
+                                    Text('Enter an athlete User ID or @username above', style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 13)),
+                                    const SizedBox(height: 4),
+                                    Text('Only real registered accounts can be added to squads.', style: GoogleFonts.outfit(color: AppColors.textMuted, fontSize: 11.5)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ] else ...[
+                    // Tab 1: Verified Directory Pool
+                    TextField(
+                      onChanged: (val) => setModalState(() => poolSearchQuery = val),
                       style: GoogleFonts.outfit(fontSize: 13),
                       decoration: InputDecoration(
-                        hintText: 'Search star athlete by name or role...',
+                        hintText: 'Search verified directory by name, role, ID...',
                         prefixIcon: const Icon(Icons.search_rounded, size: 18),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                         filled: true,
@@ -425,16 +1469,16 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                         separatorBuilder: (_, _) => const Divider(height: 1, color: Color(0xFFF1F5F9)),
                         itemBuilder: (_, i) {
                           final star = filteredStars[i];
-                          final isInTarget = targetSquad.any((p) => p.name == star.name);
-                          final isInOther = otherSquad.any((p) => p.name == star.name);
+                          final isInTarget = targetSquad.any((p) => p.name == star.name || (p.userId.isNotEmpty && p.userId == star.userId));
+                          final isInOther = otherSquad.any((p) => p.name == star.name || (p.userId.isNotEmpty && p.userId == star.userId));
 
                           return Padding(
                             padding: const EdgeInsets.symmetric(vertical: 8),
                             child: Row(
                               children: [
                                 Container(
-                                  width: 34,
-                                  height: 34,
+                                  width: 38,
+                                  height: 38,
                                   decoration: BoxDecoration(
                                     color: const Color(0xFFF1F5F9),
                                     shape: BoxShape.circle,
@@ -452,14 +1496,30 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(
-                                        star.name,
-                                        style: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 13.5),
+                                      Row(
+                                        children: [
+                                          Flexible(
+                                            child: Text(
+                                              star.name,
+                                              style: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 13.5),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          const Icon(Icons.verified_rounded, size: 13, color: Color(0xFF0284C7)),
+                                        ],
                                       ),
                                       Text(
-                                        star.role,
-                                        style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 11.5),
+                                        '${star.userId} • @${star.username} • ${star.role}',
+                                        style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 11),
+                                        overflow: TextOverflow.ellipsis,
                                       ),
+                                      if (star.specsSummary.isNotEmpty)
+                                        Text(
+                                          star.specsSummary,
+                                          style: GoogleFonts.outfit(color: const Color(0xFF059669), fontSize: 10.5, fontWeight: FontWeight.w600),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                     ],
                                   ),
                                 ),
@@ -503,92 +1563,6 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
                         },
                       ),
                     ),
-                  ] else ...[
-                    // Custom Athlete Form
-                    TextField(
-                      controller: nameController,
-                      autofocus: true,
-                      style: GoogleFonts.outfit(color: AppColors.textPrimary),
-                      decoration: InputDecoration(
-                        labelText: 'Player Full Name',
-                        hintText: 'e.g. Jasprit Bumrah',
-                        labelStyle: GoogleFonts.outfit(color: AppColors.textSecondary),
-                        prefixIcon: const Icon(Icons.person_outline_rounded),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: jerseyController,
-                            keyboardType: TextInputType.number,
-                            style: GoogleFonts.outfit(color: AppColors.textPrimary),
-                            decoration: InputDecoration(
-                              labelText: 'Jersey #',
-                              labelStyle: GoogleFonts.outfit(color: AppColors.textSecondary),
-                              prefixIcon: const Icon(Icons.tag_rounded),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          flex: 2,
-                          child: DropdownButtonFormField<String>(
-                            initialValue: role,
-                            dropdownColor: Colors.white,
-                            style: GoogleFonts.outfit(color: AppColors.textPrimary),
-                            decoration: InputDecoration(
-                              labelText: 'Position / Role',
-                              labelStyle: GoogleFonts.outfit(color: AppColors.textSecondary),
-                            ),
-                            items: _getRoleOptionsForSport().map((r) {
-                              return DropdownMenuItem(value: r, child: Text(r));
-                            }).toList(),
-                            onChanged: (val) {
-                              if (val != null) setModalState(() => role = val);
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          final name = nameController.text.trim();
-                          if (name.isEmpty) return;
-                          final jersey = int.tryParse(jerseyController.text.trim()) ?? 0;
-                          final isFirst = (teamIndex == 0 ? _team1Squad : _team2Squad).isEmpty;
-                          final newPlayer = MatchPlayer(
-                            id: 'custom_${DateTime.now().millisecondsSinceEpoch}',
-                            name: name,
-                            jerseyNumber: jersey,
-                            role: role,
-                            isCaptain: isFirst,
-                          );
-                          setState(() {
-                            if (teamIndex == 0) {
-                              _team1Squad.add(newPlayer);
-                            } else {
-                              _team2Squad.add(newPlayer);
-                            }
-                          });
-                          Navigator.pop(ctx);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.textPrimary,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                        child: Text(
-                          'Add to Squad',
-                          style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                    ),
                   ],
                 ],
               ),
@@ -599,18 +1573,196 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
     );
   }
 
-  List<String> _getRoleOptionsForSport() {
-    switch (_selectedSport) {
-      case SportType.cricket:
-        return ['Batsman', 'Bowler', 'All-Rounder', 'Wicketkeeper'];
-      case SportType.football:
-        return ['Forward', 'Midfielder', 'Defender', 'Goalkeeper'];
-      case SportType.basketball:
-        return ['Point Guard', 'Shooting Guard', 'Small Forward', 'Power Forward', 'Center'];
-      case SportType.tennis:
-        return ['Singles Player', 'Doubles Specialist'];
-    }
+  // ─── Modal to Assign Scorer or Umpire by User ID ───────────────────────────
+
+  void _showAssignOfficialModal({required bool isScorer, int umpireIndex = 1}) {
+    final queryController = TextEditingController();
+    bool isSearching = false;
+    MatchPlayer? foundOfficial;
+    String? errorText;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final title = isScorer ? 'Assign Official Scorer' : 'Assign Match Umpire #$umpireIndex';
+            final defaultList = isScorer ? RealOfficialsCatalog.getScorers() : RealOfficialsCatalog.getUmpires();
+
+            Future<void> triggerOfficialLookup(String raw) async {
+              if (raw.trim().isEmpty) return;
+              setModalState(() {
+                isSearching = true;
+                errorText = null;
+                foundOfficial = null;
+              });
+
+              final res = await _lookupOfficialProfile(raw);
+              setModalState(() {
+                isSearching = false;
+                if (res != null) {
+                  foundOfficial = res;
+                  errorText = null;
+                } else {
+                  errorText = 'No official found with User ID "$raw". Only registered officials can be sanctioned.';
+                }
+              });
+            }
+
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.75,
+              padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(context).viewInsets.bottom + 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(width: 36, height: 4, decoration: BoxDecoration(color: const Color(0xFFE2E8F0), borderRadius: BorderRadius.circular(2))),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(title, style: GoogleFonts.outfit(fontSize: 16.5, fontWeight: FontWeight.w800)),
+                      IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => Navigator.pop(ctx)),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: queryController,
+                    style: GoogleFonts.outfit(fontSize: 13.5),
+                    textInputAction: TextInputAction.search,
+                    onSubmitted: triggerOfficialLookup,
+                    decoration: InputDecoration(
+                      hintText: 'Enter official User ID (e.g. WS-OFF-001) or @username...',
+                      prefixIcon: const Icon(Icons.badge_rounded, size: 18),
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.arrow_forward_rounded, color: AppColors.primary),
+                        onPressed: () => triggerOfficialLookup(queryController.text),
+                      ),
+                      filled: true,
+                      fillColor: const Color(0xFFF8FAFC),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFCBD5E1))),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  if (isSearching) ...[
+                    const SizedBox(height: 20),
+                    const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                  ] else if (errorText != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(color: const Color(0xFFFEF2F2), borderRadius: BorderRadius.circular(8)),
+                      child: Text(errorText!, style: GoogleFonts.outfit(fontSize: 12, color: const Color(0xFFDC2626), fontWeight: FontWeight.w600)),
+                    ),
+                  ] else if (foundOfficial != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0FDF4),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF86EFAC)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.verified_rounded, color: Color(0xFF16A34A), size: 18),
+                              const SizedBox(width: 8),
+                              Text(foundOfficial!.name, style: GoogleFonts.outfit(fontWeight: FontWeight.w800, fontSize: 14.5)),
+                              const Spacer(),
+                              Text(foundOfficial!.userId, style: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 11, color: AppColors.textSecondary)),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text('@${foundOfficial!.username} • ${foundOfficial!.role}', style: GoogleFonts.outfit(fontSize: 12, color: AppColors.textSecondary)),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                setState(() {
+                                  if (isScorer) {
+                                    _assignedScorer = foundOfficial;
+                                  } else if (umpireIndex == 1) {
+                                    _assignedUmpire1 = foundOfficial;
+                                  } else {
+                                    _assignedUmpire2 = foundOfficial;
+                                  }
+                                });
+                                Navigator.pop(ctx);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF16A34A),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              child: Text('Assign as Certified Official', style: GoogleFonts.outfit(fontWeight: FontWeight.w800)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 14),
+                  Text('CERTIFIED SANCTIONED CREW POOL', style: GoogleFonts.outfit(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.textMuted)),
+                  const SizedBox(height: 8),
+
+                  Expanded(
+                    child: ListView.separated(
+                      itemCount: defaultList.length,
+                      separatorBuilder: (_, _) => const Divider(height: 1),
+                      itemBuilder: (_, i) {
+                        final off = defaultList[i];
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: CircleAvatar(
+                            backgroundColor: const Color(0xFFF1F5F9),
+                            child: Icon(isScorer ? Icons.edit_note_rounded : Icons.sports_rounded, color: AppColors.primary, size: 20),
+                          ),
+                          title: Row(
+                            children: [
+                              Text(off.name, style: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 13.5)),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.verified_rounded, size: 13, color: Color(0xFF0284C7)),
+                            ],
+                          ),
+                          subtitle: Text('${off.userId} • @${off.username} • ${off.role}', style: GoogleFonts.outfit(fontSize: 11)),
+                          trailing: TextButton(
+                            onPressed: () {
+                              setState(() {
+                                if (isScorer) {
+                                  _assignedScorer = off;
+                                } else if (umpireIndex == 1) {
+                                  _assignedUmpire1 = off;
+                                } else {
+                                  _assignedUmpire2 = off;
+                                }
+                              });
+                              Navigator.pop(ctx);
+                            },
+                            child: Text('Assign', style: GoogleFonts.outfit(fontWeight: FontWeight.w800)),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
+
 
   void _startLiveMatch() {
     final minReq = SportPlayerRules.getMinPlayers(_selectedSport, _selectedFormat);
@@ -715,6 +1867,12 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
       tossWinner: _tossWinnerIndex == 0 ? _team1NameController.text.trim() : _team2NameController.text.trim(),
       tossDecision: _tossDecision,
       creatorId: context.read<AppState>().currentUser?.id ?? 'u001',
+      scorerId: _assignedScorer?.userId ?? 'WS-OFF-001',
+      scorerName: _assignedScorer?.name ?? 'John Scorer',
+      umpire1Id: _assignedUmpire1?.userId ?? 'WS-UMP-001',
+      umpire1Name: _assignedUmpire1?.name ?? 'Nitin Kumar',
+      umpire2Id: _assignedUmpire2?.userId ?? 'WS-UMP-002',
+      umpire2Name: _assignedUmpire2?.name ?? 'Mark Davis',
     );
 
     // Save into state
@@ -1423,7 +2581,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
             ),
             const SizedBox(height: 3),
             Text(
-              '$count / $minReq Min' + (meetsMin ? ' (Ready)' : ' (Needs ${minReq - count} more)'),
+              '$count / $minReq Min ${meetsMin ? '(Ready)' : '(Needs ${minReq - count} more)'}',
               style: GoogleFonts.outfit(
                 color: isSel ? Colors.white70 : (meetsMin ? const Color(0xFF16A34A) : const Color(0xFFD97706)),
                 fontSize: 11,
@@ -1739,7 +2897,144 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
             ],
           ],
         ),
+
+        const SizedBox(height: 24),
+
+        // Sanctioned Officials & Governance
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'OFFICIAL MATCH CREW & GOVERNANCE',
+              style: GoogleFonts.outfit(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.0,
+                color: AppColors.textMuted,
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE0F2FE),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                'ZERO-DUMMY VERIFIED',
+                style: GoogleFonts.outfit(
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF0284C7),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+
+        // Official Scorer Card
+        _buildOfficialAssignmentCard(
+          roleTitle: 'OFFICIAL SCORER (DIGITAL)',
+          official: _assignedScorer,
+          onTapChange: () => _showAssignOfficialModal(isScorer: true),
+        ),
+
+        const SizedBox(height: 10),
+
+        // Lead Field Umpire Card
+        _buildOfficialAssignmentCard(
+          roleTitle: _selectedSport == SportType.football ? 'HEAD REFEREE' : 'LEAD FIELD UMPIRE',
+          official: _assignedUmpire1,
+          onTapChange: () => _showAssignOfficialModal(isScorer: false, umpireIndex: 1),
+        ),
+
+        const SizedBox(height: 10),
+
+        // 2nd Umpire / Line Referee Card
+        _buildOfficialAssignmentCard(
+          roleTitle: _selectedSport == SportType.football ? 'ASSISTANT / 4TH OFFICIAL' : '2ND UMPIRE / LINE REFEREE',
+          official: _assignedUmpire2,
+          onTapChange: () => _showAssignOfficialModal(isScorer: false, umpireIndex: 2),
+        ),
       ],
+    );
+  }
+
+  Widget _buildOfficialAssignmentCard({
+    required String roleTitle,
+    required MatchPlayer? official,
+    required VoidCallback onTapChange,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE0F2FE),
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color(0xFFBAE6FD)),
+            ),
+            child: const Icon(Icons.shield_rounded, size: 20, color: Color(0xFF0284C7)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      roleTitle,
+                      style: GoogleFonts.outfit(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5,
+                        color: const Color(0xFF0284C7),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.verified_rounded, size: 12, color: Color(0xFF0284C7)),
+                  ],
+                ),
+                Text(
+                  official?.name ?? 'Assigned Official',
+                  style: GoogleFonts.outfit(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                Text(
+                  '${official?.userId ?? "WS-OFF"} • @${official?.username ?? "official"}',
+                  style: GoogleFonts.outfit(
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: onTapChange,
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              foregroundColor: AppColors.primary,
+            ),
+            child: Text(
+              'Change',
+              style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

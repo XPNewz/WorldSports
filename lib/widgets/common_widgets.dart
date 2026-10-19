@@ -777,6 +777,8 @@ class RoleCard extends StatelessWidget {
         return Icons.sports_score_rounded;
       case UserRole.organiser:
         return Icons.emoji_events_rounded;
+      case UserRole.umpire:
+        return Icons.gavel_rounded;
     }
   }
 
@@ -788,6 +790,8 @@ class RoleCard extends StatelessWidget {
         return 'Coach / Trainer';
       case UserRole.organiser:
         return 'League Organiser';
+      case UserRole.umpire:
+        return 'Umpire / Referee';
     }
   }
 
@@ -799,6 +803,8 @@ class RoleCard extends StatelessWidget {
         return 'Build lineups, scout talent & direct match strategy';
       case UserRole.organiser:
         return 'Host leagues, create tournaments & distribute trophies';
+      case UserRole.umpire:
+        return 'Official adjudicator, scorecard verification & bylaw reviews';
     }
   }
 
@@ -810,6 +816,8 @@ class RoleCard extends StatelessWidget {
         return AppColors.secondary;
       case UserRole.organiser:
         return AppColors.gold;
+      case UserRole.umpire:
+        return const Color(0xFF0EA5E9);
     }
   }
 

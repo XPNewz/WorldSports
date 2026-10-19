@@ -836,18 +836,6 @@ class _JumbotronMatchCard extends StatelessWidget {
     }
   }
 
-  String _getLiveTickerTime(Map<String, dynamic>? score, SportType sport) {
-    if (score == null) return 'LIVE';
-    if (sport == SportType.football) {
-      return '${score['minute'] ?? 67}\'';
-    } else if (sport == SportType.basketball) {
-      return 'Q${score['quarter'] ?? 3} ${score['time_left'] ?? '4:23'}';
-    } else if (sport == SportType.cricket) {
-      return '${score['team1_overs'] ?? '18.2'} OV';
-    }
-    return 'LIVE';
-  }
-
   String _getTeamScore(Map<String, dynamic>? score, SportType sport, int teamNum) {
     if (score == null) return '-';
     final isTeam1 = teamNum == 1;
@@ -886,7 +874,7 @@ class _ScoreboardSponsorBanner extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: const Color(0xFFF59E0B).withOpacity(0.35),
+          color: const Color(0xFFF59E0B).withValues(alpha: 0.35),
           width: 1.2,
         ),
         boxShadow: const [AppColors.cellShadow],

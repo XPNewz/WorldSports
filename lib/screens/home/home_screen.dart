@@ -278,9 +278,7 @@ class HomeScreen extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         BouncingTap(
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const SearchScreen()),
-                          ),
+                          onTap: () => _showSearchModal(context),
                           child: const Icon(Icons.search_rounded, color: AppColors.textPrimary, size: 26),
                         ),
                         const SizedBox(width: 8),
@@ -712,32 +710,6 @@ class HomeScreen extends StatelessWidget {
     ),
   );
 }
-
-  Widget _quickSearchPill(String label, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: color, size: 14),
-          const SizedBox(width: 5),
-          Text(
-            label,
-            style: GoogleFonts.outfit(
-              color: color,
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _NotificationItem extends StatelessWidget {
@@ -905,8 +877,6 @@ class _MatchTeamRow extends StatelessWidget {
   final Color crestColor;
   final double fontSize;
   final double crestSize;
-  final bool showCrest;
-
   const _MatchTeamRow({
     required this.name,
     required this.shortName,
@@ -917,21 +887,18 @@ class _MatchTeamRow extends StatelessWidget {
     required this.crestColor,
     this.fontSize = 14.5,
     this.crestSize = 24,
-    this.showCrest = true,
   });
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        if (showCrest) ...[
-          TeamCrest(
-            shortName: shortName,
-            color: crestColor,
-            size: crestSize,
-          ),
-          const SizedBox(width: 8),
-        ],
+        TeamCrest(
+          shortName: shortName,
+          color: crestColor,
+          size: crestSize,
+        ),
+        const SizedBox(width: 8),
         Expanded(
           child: Text(
             name,
@@ -1595,6 +1562,7 @@ class _NearbyMatchCard extends StatelessWidget {
     );
   }
 }
+
 // ─── Modern Sports Banner Ad ──────────────────────────────────────────────────
 
 class _ModernSportsBannerAd extends StatelessWidget {
@@ -1620,7 +1588,7 @@ class _ModernSportsBannerAd extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.18),
+            color: AppColors.primary.withValues(alpha: 0.18),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -1641,7 +1609,7 @@ class _ModernSportsBannerAd extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
+                        color: Colors.white.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Row(
@@ -1686,7 +1654,7 @@ class _ModernSportsBannerAd extends StatelessWidget {
                   ad.headline,
                   style: GoogleFonts.outfit(
                     color: Colors.white,
-                    fontSize: 16,
+                    fontSize: 18,
                     fontWeight: FontWeight.w900,
                     letterSpacing: -0.3,
                   ),
@@ -1695,7 +1663,7 @@ class _ModernSportsBannerAd extends StatelessWidget {
                 Text(
                   ad.bodyText,
                   style: GoogleFonts.outfit(
-                    color: Colors.white.withOpacity(0.85),
+                    color: Colors.white.withValues(alpha: 0.85),
                     fontSize: 12,
                     height: 1.35,
                   ),
@@ -1721,7 +1689,33 @@ class _ModernSportsBannerAd extends StatelessWidget {
                         Text(
                           '(${ad.reviewsCount}+ athletes)',
                           style: GoogleFonts.outfit(
-                            color: Colors.white.withOpacity(0.65),
+                            color: Colors.white.withValues(alpha: 0.65),
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),rflow.ellipsis,
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${ad.rating}',
+                          style: GoogleFonts.outfit(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '(${ad.reviewsCount}+ athletes)',
+                          style: GoogleFonts.outfit(
+                            color: Colors.white.withValues(alpha: 0.65),
                             fontSize: 11,
                           ),
                         ),
@@ -1867,7 +1861,7 @@ class _TwitterSportsTweetCard extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: sportColor.withOpacity(0.1),
+                                color: sportColor.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
@@ -2006,10 +2000,10 @@ class _TwitterSportsTweetCard extends StatelessWidget {
       width: 40,
       height: 40,
       decoration: BoxDecoration(
-        color: sportColor.withOpacity(0.12),
+        color: sportColor.withValues(alpha: 0.12),
         shape: BoxShape.circle,
         border: Border.all(
-          color: sportColor.withOpacity(0.3),
+          color: sportColor.withValues(alpha: 0.3),
           width: 1.2,
         ),
       ),
@@ -2042,8 +2036,8 @@ class _TwitterSportsTweetCard extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  sportColor.withOpacity(0.85),
-                  sportColor.withOpacity(0.35),
+                  sportColor.withValues(alpha: 0.85),
+                  sportColor.withValues(alpha: 0.35),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -2057,7 +2051,7 @@ class _TwitterSportsTweetCard extends StatelessWidget {
                   child: Icon(
                     Icons.sports_rounded,
                     size: 85,
-                    color: Colors.white.withOpacity(0.15),
+                    color: Colors.white.withValues(alpha: 0.15),
                   ),
                 ),
                 Padding(
@@ -2067,7 +2061,7 @@ class _TwitterSportsTweetCard extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.45),
+                        color: Colors.black.withValues(alpha: 0.45),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Row(
@@ -2262,7 +2256,7 @@ class _TwitterPromotedAdPost extends StatelessWidget {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.primary.withOpacity(0.2),
+                            color: AppColors.primary.withValues(alpha: 0.2),
                             blurRadius: 6,
                             offset: const Offset(0, 2),
                           ),

@@ -5,6 +5,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/models/models.dart';
 import '../../core/state/app_state.dart';
 import '../../widgets/common_widgets.dart';
+import '../../core/services/supabase_service.dart';
 import '../auth/auth_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -49,6 +50,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               child: Column(
                 children: [
+                  // IN-APP NOTIFICATION BANNER (When profile incomplete)
+                  if (!user.hasCompletedProfile && user.role != UserRole.umpire)
+                    _buildInAppNotificationBanner(context, user),
+
                   // Top Title & Settings Row
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -71,7 +76,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
+                          BouncingTap(
+                            onTap: () => _showSpecializationSheet(context, user),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.tune_rounded, color: AppColors.primary, size: 12),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    'SPECS',
+                                    style: GoogleFonts.outfit(
+                                      color: AppColors.primary,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
@@ -210,6 +241,49 @@ boxShadow: const [AppColors.cellShadowSmall],
                                 ),
                               ],
                             ),
+                            if (user.role == UserRole.player || user.role == UserRole.coach) ...[
+                              const SizedBox(height: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surfaceLight,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: AppColors.surfaceLighter),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      user.primarySport == SportType.cricket
+                                          ? Icons.sports_cricket_rounded
+                                          : user.primarySport == SportType.football
+                                              ? Icons.sports_soccer_rounded
+                                              : user.primarySport == SportType.basketball
+                                                  ? Icons.sports_basketball_rounded
+                                                  : Icons.sports_tennis_rounded,
+                                      size: 13,
+                                      color: AppColors.sportColor(user.primarySport.name),
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Flexible(
+                                      child: Text(
+                                        user.cricketSpecs != null && user.primarySport == SportType.cricket
+                                            ? user.cricketSpecs!.summary
+                                            : user.footballSpecs != null && user.primarySport == SportType.football
+                                                ? user.footballSpecs!.summary
+                                                : user.primaryRole,
+                                        style: GoogleFonts.outfit(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.textPrimary,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -554,6 +628,119 @@ boxShadow: const [AppColors.cellShadowSmall],
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (ctx) => _DedicatedSportWindowSheet(sport: sport, stats: stats),
+    );
+  }
+
+  Widget _buildInAppNotificationBanner(BuildContext context, UserModel user) {
+    final percent = user.profileCompletionPercent;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 18),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFFFFFBEB),
+            const Color(0xFFFEF3C7).withValues(alpha: 0.6),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFFDE68A), width: 1.2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF59E0B),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.notifications_active_rounded, color: Colors.white, size: 14),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'IN-APP ALERT • ATHLETE PROFILE INCOMPLETE ($percent%)',
+                      style: GoogleFonts.outfit(
+                        color: const Color(0xFF92400E),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    Text(
+                      'Set batting/bowling styles or pitch position to qualify for match squads',
+                      style: GoogleFonts.outfit(
+                        color: const Color(0xFFB45309),
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: percent / 100,
+              minHeight: 6,
+              backgroundColor: const Color(0xFFFDE68A),
+              valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFF59E0B)),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              BouncingTap(
+                onTap: () => _showSpecializationSheet(context, user),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF59E0B),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.tune_rounded, color: Colors.white, size: 14),
+                      const SizedBox(width: 6),
+                      Text(
+                        'COMPLETE SPECS NOW',
+                        style: GoogleFonts.outfit(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.6,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSpecializationSheet(BuildContext context, UserModel user) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => _SpecializationModalSheet(user: user),
     );
   }
 
@@ -1077,8 +1264,9 @@ class _RoleBadge extends StatelessWidget {
       UserRole.player: {'label': 'ATHLETE', 'color': AppColors.primary},
       UserRole.coach: {'label': 'COACH', 'color': AppColors.secondary},
       UserRole.organiser: {'label': 'ORGANISER', 'color': AppColors.gold},
+      UserRole.umpire: {'label': 'UMPIRE / REFEREE', 'color': const Color(0xFF0EA5E9)},
     };
-    final d = data[role]!;
+    final d = data[role] ?? {'label': 'ATHLETE', 'color': AppColors.primary};
     final color = d['color'] as Color;
 
     return Container(
@@ -1976,4 +2164,741 @@ class _RoleMetricTile extends StatelessWidget {
     );
   }
 }
+
+// ─── Athletic Specialization Customization Sheet ─────────────────────────────
+
+class _SpecializationModalSheet extends StatefulWidget {
+  final UserModel user;
+  const _SpecializationModalSheet({required this.user});
+
+  @override
+  State<_SpecializationModalSheet> createState() => _SpecializationModalSheetState();
+}
+
+class _SpecializationModalSheetState extends State<_SpecializationModalSheet> {
+  late SportType _selectedSport;
+
+  // Cricket
+  late String _battingHand;
+  late String _bowlingArm;
+  late String _bowlingCategory;
+  late String _bowlingVariation;
+  late bool _isWicketKeeper;
+
+  // Football
+  late String _footballPosition;
+  late String _footballFoot;
+
+  // Basketball
+  late String _basketballPosition;
+
+  // Tennis
+  late String _tennisHand;
+  late String _tennisBackhand;
+  late String _tennisPlaystyle;
+
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedSport = widget.user.primarySport;
+
+    final c = widget.user.cricketSpecs ?? const CricketSpecs();
+    _battingHand = c.battingHand;
+    _bowlingArm = c.bowlingArm;
+    _bowlingCategory = c.bowlingCategory;
+    _bowlingVariation = c.bowlingVariation;
+    _isWicketKeeper = c.isWicketKeeper;
+
+    final f = widget.user.footballSpecs ?? const FootballSpecs();
+    _footballPosition = f.position;
+    _footballFoot = f.preferredFoot;
+
+    final b = widget.user.basketballSpecs ?? const BasketballSpecs();
+    _basketballPosition = b.position;
+
+    final t = widget.user.tennisSpecs ?? const TennisSpecs();
+    _tennisHand = t.hand;
+    _tennisBackhand = t.backhand;
+    _tennisPlaystyle = t.playstyle;
+  }
+
+  void _saveSpecialization() async {
+    setState(() => _isSaving = true);
+    final appState = context.read<AppState>();
+    Map<String, dynamic> specsMap = {};
+
+    if (_selectedSport == SportType.cricket) {
+      final specs = CricketSpecs(
+        battingHand: _battingHand,
+        bowlingArm: _bowlingArm,
+        bowlingCategory: _bowlingCategory,
+        bowlingVariation: _bowlingVariation,
+        isWicketKeeper: _isWicketKeeper,
+      );
+      appState.updateCricketSpecs(specs);
+      specsMap = specs.toMap();
+    } else if (_selectedSport == SportType.football) {
+      final specs = FootballSpecs(
+        position: _footballPosition,
+        preferredFoot: _footballFoot,
+      );
+      appState.updateFootballSpecs(specs);
+      specsMap = specs.toMap();
+    } else if (_selectedSport == SportType.basketball) {
+      final specs = BasketballSpecs(position: _basketballPosition);
+      appState.updateBasketballSpecs(specs);
+      specsMap = specs.toMap();
+    } else if (_selectedSport == SportType.tennis) {
+      final specs = TennisSpecs(
+        hand: _tennisHand,
+        backhand: _tennisBackhand,
+        playstyle: _tennisPlaystyle,
+      );
+      appState.updateTennisSpecs(specs);
+      specsMap = specs.toMap();
+    }
+
+    try {
+      await SupabaseService.updateAthleteSpecs(
+        userId: widget.user.id,
+        sport: _selectedSport.name,
+        specs: specsMap,
+      );
+    } catch (_) {}
+
+    if (mounted) {
+      setState(() => _isSaving = false);
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.verified_rounded, color: Colors.white, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Athlete Specs Saved & Verified for ${_selectedSport.name.toUpperCase()}!',
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: AppColors.primary,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sportColor = AppColors.sportColor(_selectedSport.name);
+
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.90,
+      ),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Drag handle
+          Center(
+            child: Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              width: 44,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceLighter,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+
+          // Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 6, 16, 12),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: sportColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.tune_rounded, color: sportColor, size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'ATHLETE SPECIALIZATION',
+                        style: GoogleFonts.outfit(
+                          color: AppColors.textPrimary,
+                          fontSize: 16.5,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      Text(
+                        'Define your playing roles to qualify for sanctioned match squads',
+                        style: GoogleFonts.outfit(
+                          color: AppColors.textMuted,
+                          fontSize: 11.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                BouncingTap(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceLight,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.surfaceLighter),
+                    ),
+                    child: const Icon(Icons.close_rounded, size: 18, color: AppColors.textPrimary),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const Divider(height: 1, color: AppColors.surfaceLighter),
+
+          // Sport Selector Tabs
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),
+            child: Row(
+              children: SportType.values.map((sport) {
+                final isSel = _selectedSport == sport;
+                final col = AppColors.sportColor(sport.name);
+                return Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _selectedSport = sport),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isSel ? col.withValues(alpha: 0.15) : AppColors.surfaceLight,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isSel ? col : AppColors.surfaceLighter,
+                          width: isSel ? 1.6 : 1,
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          SportBadge(sport: sport, size: 22, showLabel: false),
+                          const SizedBox(height: 3),
+                          Text(
+                            sport.name.toUpperCase(),
+                            style: GoogleFonts.outfit(
+                              fontSize: 10,
+                              fontWeight: isSel ? FontWeight.w900 : FontWeight.w700,
+                              color: isSel ? col : AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+
+          // Scrollable Specs Form
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (_selectedSport == SportType.cricket)
+                    _buildCricketSpecsForm(sportColor)
+                  else if (_selectedSport == SportType.football)
+                    _buildFootballSpecsForm(sportColor)
+                  else if (_selectedSport == SportType.basketball)
+                    _buildBasketballSpecsForm(sportColor)
+                  else if (_selectedSport == SportType.tennis)
+                    _buildTennisSpecsForm(sportColor),
+
+                  const SizedBox(height: 24),
+
+                  // Save Button
+                  if (_isSaving)
+                    const Center(child: CircularProgressIndicator())
+                  else
+                    GradientButton(
+                      label: 'SAVE & VERIFY ATHLETE PASSPORT',
+                      width: double.infinity,
+                      icon: Icons.verified_rounded,
+                      onTap: _saveSpecialization,
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Cricket Specs Form ───────────────────────────────────────────────────
+
+  Widget _buildCricketSpecsForm(Color accentColor) {
+    final fastVariations = ['Fast', 'Fast-Medium', 'Medium-Fast', 'Medium'];
+    final spinVariations = [
+      'Off-Spinner',
+      'Leg-Spinner',
+      'Slow Left-Arm Orthodox',
+      'Left-Arm Unorthodox (Chinaman)',
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 1. Batting Hand
+        _buildSectionTitle('1. BATTING STYLE', Icons.sports_cricket_rounded, accentColor),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: _buildChoicePill(
+                label: 'Right-hand bat',
+                icon: Icons.front_hand_rounded,
+                isSelected: _battingHand == 'Right-hand bat',
+                onTap: () => setState(() => _battingHand = 'Right-hand bat'),
+                accentColor: accentColor,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _buildChoicePill(
+                label: 'Left-hand bat',
+                icon: Icons.back_hand_rounded,
+                isSelected: _battingHand == 'Left-hand bat',
+                onTap: () => setState(() => _battingHand = 'Left-hand bat'),
+                accentColor: accentColor,
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 18),
+
+        // 2. Bowling Arm
+        _buildSectionTitle('2. BOWLING ARM', Icons.pan_tool_rounded, accentColor),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: _buildChoicePill(
+                label: 'Right-arm',
+                icon: Icons.arrow_circle_right_outlined,
+                isSelected: _bowlingArm == 'Right-arm',
+                onTap: () => setState(() => _bowlingArm = 'Right-arm'),
+                accentColor: accentColor,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _buildChoicePill(
+                label: 'Left-arm',
+                icon: Icons.arrow_circle_left_outlined,
+                isSelected: _bowlingArm == 'Left-arm',
+                onTap: () => setState(() => _bowlingArm = 'Left-arm'),
+                accentColor: accentColor,
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 18),
+
+        // 3. Bowling Category (Pace vs Spin)
+        _buildSectionTitle('3. BOWLING CATEGORY', Icons.speed_rounded, accentColor),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: _buildChoicePill(
+                label: 'Fast / Pace',
+                icon: Icons.flash_on_rounded,
+                isSelected: _bowlingCategory == 'Fast / Pace',
+                onTap: () {
+                  setState(() {
+                    _bowlingCategory = 'Fast / Pace';
+                    _bowlingVariation = 'Fast-Medium';
+                  });
+                },
+                accentColor: accentColor,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _buildChoicePill(
+                label: 'Spin',
+                icon: Icons.rotate_right_rounded,
+                isSelected: _bowlingCategory == 'Spin',
+                onTap: () {
+                  setState(() {
+                    _bowlingCategory = 'Spin';
+                    _bowlingVariation = _bowlingArm == 'Left-arm'
+                        ? 'Slow Left-Arm Orthodox'
+                        : 'Off-Spinner';
+                  });
+                },
+                accentColor: accentColor,
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 16),
+
+        // 4. Bowling Variation (Sub-choices)
+        Text(
+          _bowlingCategory == 'Fast / Pace'
+              ? 'SPECIFIC PACE VARIATION'
+              : 'SPECIFIC SPIN VARIATION',
+          style: GoogleFonts.outfit(
+            color: AppColors.textMuted,
+            fontSize: 10.5,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.6,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: (_bowlingCategory == 'Fast / Pace' ? fastVariations : spinVariations)
+              .map(
+                (v) => _buildOptionChip(
+                  label: v,
+                  isSelected: _bowlingVariation == v,
+                  onTap: () => setState(() => _bowlingVariation = v),
+                  accentColor: accentColor,
+                ),
+              )
+              .toList(),
+        ),
+
+        const SizedBox(height: 18),
+
+        // 5. Wicketkeeping Toggle
+        _buildSectionTitle('4. WICKETKEEPER CAPABILITY', Icons.sports_kabaddi_rounded, accentColor),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: _buildChoicePill(
+                label: 'Wicketkeeper: Yes',
+                icon: Icons.check_circle_rounded,
+                isSelected: _isWicketKeeper,
+                onTap: () => setState(() => _isWicketKeeper = true),
+                accentColor: accentColor,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _buildChoicePill(
+                label: 'Wicketkeeper: No',
+                icon: Icons.cancel_outlined,
+                isSelected: !_isWicketKeeper,
+                onTap: () => setState(() => _isWicketKeeper = false),
+                accentColor: accentColor,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // ─── Football Specs Form ──────────────────────────────────────────────────
+
+  Widget _buildFootballSpecsForm(Color accentColor) {
+    final positions = ['Goalkeeper', 'Defender', 'Midfielder', 'Striker / Forward'];
+    final feet = ['Right Foot', 'Left Foot', 'Both Feet'];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('1. PRIMARY PITCH POSITION', Icons.sports_soccer_rounded, accentColor),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: positions
+              .map(
+                (pos) => _buildOptionChip(
+                  label: pos,
+                  isSelected: _footballPosition == pos,
+                  onTap: () => setState(() => _footballPosition = pos),
+                  accentColor: accentColor,
+                ),
+              )
+              .toList(),
+        ),
+
+        const SizedBox(height: 18),
+
+        _buildSectionTitle('2. PREFERRED STRIKING FOOT', Icons.directions_walk_rounded, accentColor),
+        const SizedBox(height: 8),
+        Row(
+          children: feet.map((ft) {
+            final isSel = _footballFoot == ft;
+            return Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 3),
+                child: _buildChoicePill(
+                  label: ft,
+                  icon: Icons.sports_score_rounded,
+                  isSelected: isSel,
+                  onTap: () => setState(() => _footballFoot = ft),
+                  accentColor: accentColor,
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  // ─── Basketball Specs Form ────────────────────────────────────────────────
+
+  Widget _buildBasketballSpecsForm(Color accentColor) {
+    final positions = [
+      'Point Guard (PG)',
+      'Shooting Guard (SG)',
+      'Small Forward (SF)',
+      'Power Forward (PF)',
+      'Center (C)',
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('PRIMARY COURT ROLE', Icons.sports_basketball_rounded, accentColor),
+        const SizedBox(height: 8),
+        ...positions.map((pos) {
+          final isSel = _basketballPosition == pos;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: _buildChoicePill(
+              label: pos,
+              icon: Icons.sports_basketball_outlined,
+              isSelected: isSel,
+              onTap: () => setState(() => _basketballPosition = pos),
+              accentColor: accentColor,
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  // ─── Tennis Specs Form ────────────────────────────────────────────────────
+
+  Widget _buildTennisSpecsForm(Color accentColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('1. PLAYING HAND', Icons.sports_tennis_rounded, accentColor),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: _buildChoicePill(
+                label: 'Right-handed',
+                icon: Icons.front_hand_rounded,
+                isSelected: _tennisHand == 'Right-handed',
+                onTap: () => setState(() => _tennisHand = 'Right-handed'),
+                accentColor: accentColor,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _buildChoicePill(
+                label: 'Left-handed',
+                icon: Icons.back_hand_rounded,
+                isSelected: _tennisHand == 'Left-handed',
+                onTap: () => setState(() => _tennisHand = 'Left-handed'),
+                accentColor: accentColor,
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 18),
+
+        _buildSectionTitle('2. BACKHAND TYPE', Icons.sports_score_rounded, accentColor),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: _buildChoicePill(
+                label: 'Two-handed',
+                icon: Icons.pan_tool_rounded,
+                isSelected: _tennisBackhand == 'Two-handed',
+                onTap: () => setState(() => _tennisBackhand = 'Two-handed'),
+                accentColor: accentColor,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _buildChoicePill(
+                label: 'One-handed',
+                icon: Icons.back_hand_rounded,
+                isSelected: _tennisBackhand == 'One-handed',
+                onTap: () => setState(() => _tennisBackhand = 'One-handed'),
+                accentColor: accentColor,
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 18),
+
+        _buildSectionTitle('3. STRATEGICAL PLAYSTYLE', Icons.style_rounded, accentColor),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: ['All-Court', 'Baseliner', 'Serve & Volley']
+              .map(
+                (ps) => _buildOptionChip(
+                  label: ps,
+                  isSelected: _tennisPlaystyle == ps,
+                  onTap: () => setState(() => _tennisPlaystyle = ps),
+                  accentColor: accentColor,
+                ),
+              )
+              .toList(),
+        ),
+      ],
+    );
+  }
+
+  // ─── UI Helpers ───────────────────────────────────────────────────────────
+
+  Widget _buildSectionTitle(String title, IconData icon, Color accentColor) {
+    return Row(
+      children: [
+        Icon(icon, color: accentColor, size: 16),
+        const SizedBox(width: 6),
+        Text(
+          title,
+          style: GoogleFonts.outfit(
+            color: AppColors.textPrimary,
+            fontSize: 12,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0.6,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildChoicePill({
+    required String label,
+    required IconData icon,
+    required bool isSelected,
+    required VoidCallback onTap,
+    required Color accentColor,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? accentColor.withValues(alpha: 0.12) : AppColors.surfaceLight,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? accentColor : AppColors.surfaceLighter,
+            width: isSelected ? 1.6 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: isSelected ? accentColor : AppColors.textSecondary,
+            ),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                label,
+                style: GoogleFonts.outfit(
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                  color: isSelected ? accentColor : AppColors.textPrimary,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOptionChip({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+    required Color accentColor,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? accentColor : Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected ? accentColor : AppColors.surfaceLighter,
+            width: isSelected ? 1.6 : 1,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: accentColor.withValues(alpha: 0.25),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.outfit(
+            color: isSelected ? Colors.white : AppColors.textPrimary,
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 

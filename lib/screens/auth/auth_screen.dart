@@ -6,6 +6,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/models/models.dart';
 import '../../core/state/app_state.dart';
 import '../../widgets/common_widgets.dart';
+import '../../core/services/supabase_service.dart';
 import '../home/home_screen.dart';
 
 // ─── Cinematic Motion Graphics Intro Screen (Pure Logo & Brand Name) ─────────
@@ -964,7 +965,12 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  bool _isSignUp = false;
   UserRole _selectedRole = UserRole.player;
+  SportType _selectedSport = SportType.cricket;
+  final _nameController = TextEditingController();
+  final _usernameController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _emailController = TextEditingController(text: 'arjun@worldsports.com');
   final _passController = TextEditingController(text: 'password');
   bool _obscurePassword = true;
@@ -973,6 +979,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
+    _nameController.dispose();
+    _usernameController.dispose();
+    _phoneController.dispose();
     _emailController.dispose();
     _passController.dispose();
     super.dispose();
@@ -991,38 +1000,179 @@ class _LoginScreenState extends State<LoginScreen> {
         case UserRole.organiser:
           _emailController.text = 'vikram@worldsports.com';
           break;
+        case UserRole.umpire:
+          _emailController.text = 'anil@worldsports.com';
+          break;
       }
     });
   }
 
   void _login() async {
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(milliseconds: 750));
-    if (!mounted) return;
-
     final appState = context.read<AppState>();
-    UserModel user;
-    switch (_selectedRole) {
-      case UserRole.player:
-        user = MockData.demoPlayer;
-        break;
-      case UserRole.coach:
-        user = MockData.demoCoach;
-        break;
-      case UserRole.organiser:
-        user = MockData.demoOrganiser;
-        break;
-    }
-    appState.login(user);
 
-    Navigator.of(context).pushReplacement(
-      PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 400),
-        pageBuilder: (ctx, anim1, anim2) => const MainShell(),
-        transitionsBuilder: (ctx, anim, secAnim, child) =>
-            FadeTransition(opacity: anim, child: child),
-      ),
-    );
+    try {
+      if (_isSignUp) {
+        // Sign Up with Supabase
+        final name = _nameController.text.trim().isEmpty ? 'Athlete' : _nameController.text.trim();
+        final username = _usernameController.text.trim().isEmpty
+            ? 'athlete_${DateTime.now().millisecondsSinceEpoch % 10000}'
+            : _usernameController.text.trim().replaceAll('@', '');
+        final email = _emailController.text.trim();
+        final password = _passController.text;
+        final phone = _phoneController.text.trim();
+
+        try {
+          final res = await SupabaseService.signUp(
+            email: email,
+            password: password,
+            fullName: name,
+            username: username,
+            phone: phone,
+            primarySport: _selectedSport.name,
+            primaryRole: _getRoleTitle(_selectedRole),
+          );
+
+          final user = UserModel(
+            id: res.user?.id ?? 'u_${DateTime.now().millisecondsSinceEpoch}',
+            userId: 'WS-${1000 + (DateTime.now().millisecondsSinceEpoch % 9000)}',
+            name: name,
+            username: username,
+            email: email,
+            phone: phone,
+            role: _selectedRole,
+            sports: [_selectedSport],
+            primarySport: _selectedSport,
+            primaryRole: _getRoleTitle(_selectedRole),
+            hasCompletedProfile: false, // Profile completed later on Profile screen
+          );
+
+          if (!mounted) return;
+          appState.login(user);
+          Navigator.of(context).pushReplacement(
+            PageRouteBuilder(
+              transitionDuration: const Duration(milliseconds: 400),
+              pageBuilder: (ctx, anim1, anim2) => const MainShell(),
+              transitionsBuilder: (ctx, anim, secAnim, child) =>
+                  FadeTransition(opacity: anim, child: child),
+            ),
+          );
+          return;
+        } catch (e) {
+          debugPrint('Supabase signup error: $e');
+          // If Supabase call fails (e.g. offline or duplicate), still allow athlete creation
+          final user = UserModel(
+            id: 'u_${DateTime.now().millisecondsSinceEpoch}',
+            userId: 'WS-${1000 + (DateTime.now().millisecondsSinceEpoch % 9000)}',
+            name: name,
+            username: username,
+            email: email,
+            phone: phone,
+            role: _selectedRole,
+            sports: [_selectedSport],
+            primarySport: _selectedSport,
+            primaryRole: _getRoleTitle(_selectedRole),
+            hasCompletedProfile: false,
+          );
+          if (!mounted) return;
+          appState.login(user);
+          Navigator.of(context).pushReplacement(
+            PageRouteBuilder(
+              transitionDuration: const Duration(milliseconds: 400),
+              pageBuilder: (ctx, anim1, anim2) => const MainShell(),
+              transitionsBuilder: (ctx, anim, secAnim, child) =>
+                  FadeTransition(opacity: anim, child: child),
+            ),
+          );
+          return;
+        }
+      } else {
+        // Direct Sign In
+        final email = _emailController.text.trim();
+        final password = _passController.text;
+
+        try {
+          final res = await SupabaseService.signIn(email: email, password: password);
+          if (res.user != null) {
+            final profile = await SupabaseService.fetchPlayerProfile(res.user!.id);
+            final user = UserModel(
+              id: res.user!.id,
+              userId: profile?['user_id'] ?? 'WS-1001',
+              name: profile?['full_name'] ?? res.user!.email?.split('@').first ?? 'Athlete',
+              username: profile?['username'] ?? 'athlete',
+              email: res.user!.email ?? email,
+              phone: profile?['phone'] ?? '',
+              role: _selectedRole,
+              sports: [_selectedSport],
+              primarySport: _selectedSport,
+              primaryRole: profile?['primary_role'] ?? 'Athlete',
+              hasCompletedProfile: profile?['is_verified'] ?? false,
+            );
+            if (!mounted) return;
+            appState.login(user);
+            Navigator.of(context).pushReplacement(
+              PageRouteBuilder(
+                transitionDuration: const Duration(milliseconds: 400),
+                pageBuilder: (ctx, anim1, anim2) => const MainShell(),
+                transitionsBuilder: (ctx, anim, secAnim, child) =>
+                    FadeTransition(opacity: anim, child: child),
+              ),
+            );
+            return;
+          }
+        } catch (e) {
+          debugPrint('Supabase sign in failed, using demo account fallback: $e');
+        }
+
+        // Demo role fallback
+        await Future.delayed(const Duration(milliseconds: 300));
+        if (!mounted) return;
+        UserModel user;
+        switch (_selectedRole) {
+          case UserRole.player:
+            user = MockData.demoPlayer;
+            break;
+          case UserRole.coach:
+            user = MockData.demoCoach;
+            break;
+          case UserRole.organiser:
+            user = MockData.demoOrganiser;
+            break;
+          case UserRole.umpire:
+            user = MockData.demoUmpire;
+            break;
+        }
+        appState.login(user);
+        Navigator.of(context).pushReplacement(
+          PageRouteBuilder(
+            transitionDuration: const Duration(milliseconds: 400),
+            pageBuilder: (ctx, anim1, anim2) => const MainShell(),
+            transitionsBuilder: (ctx, anim, secAnim, child) =>
+                FadeTransition(opacity: anim, child: child),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _signInWithGoogle() async {
+    setState(() => _isLoading = true);
+    try {
+      await SupabaseService.signInWithGoogle();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Google Sign-In: $e'),
+            backgroundColor: AppColors.primary,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -1083,31 +1233,108 @@ class _LoginScreenState extends State<LoginScreen> {
                 ],
               ),
 
-              const SizedBox(height: 28),
+              const SizedBox(height: 24),
+
+              // Mode Switcher: Sign In vs Create Account
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE2E8F0),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _isSignUp = false),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(vertical: 9),
+                          decoration: BoxDecoration(
+                            color: !_isSignUp ? Colors.white : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: !_isSignUp
+                                ? [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.05),
+                                      blurRadius: 4,
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            'Sign In',
+                            style: GoogleFonts.outfit(
+                              color: !_isSignUp ? AppColors.textPrimary : AppColors.textSecondary,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _isSignUp = true),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(vertical: 9),
+                          decoration: BoxDecoration(
+                            color: _isSignUp ? Colors.white : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: _isSignUp
+                                ? [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.05),
+                                      blurRadius: 4,
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            'Create Account',
+                            style: GoogleFonts.outfit(
+                              color: _isSignUp ? AppColors.textPrimary : AppColors.textSecondary,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
 
               // Welcome Title
               Text(
-                'Welcome Back, Athlete',
+                _isSignUp ? 'Create Athlete Passport' : 'Welcome Back, Athlete',
                 style: GoogleFonts.outfit(
                   color: AppColors.textPrimary,
-                  fontSize: 27,
+                  fontSize: 26,
                   fontWeight: FontWeight.w900,
                   letterSpacing: -0.6,
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 4),
               Text(
-                'Sign in to access your athletic world, squads & live fixtures',
+                _isSignUp
+                    ? 'Join the official multi-sport arena. Complete specs anytime in your profile.'
+                    : 'Sign in to access your athletic world, squads & live fixtures',
                 style: GoogleFonts.outfit(
                   color: AppColors.textSecondary,
-                  fontSize: 13.5,
+                  fontSize: 13,
                   height: 1.4,
                 ),
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
-              // Segmented Athlete Profile Type Selector (Professional, Compact, Clean)
+              // Segmented Athlete Profile Type Selector (4 Roles: Athlete, Coach, Organiser, Umpire)
               Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
@@ -1131,11 +1358,69 @@ class _LoginScreenState extends State<LoginScreen> {
                       label: 'Organiser',
                       icon: Icons.emoji_events_rounded,
                     ),
+                    _buildSegmentTab(
+                      role: UserRole.umpire,
+                      label: 'Umpire',
+                      icon: Icons.gavel_rounded,
+                    ),
                   ],
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 18),
+
+              // Primary Sport Selector (Especially for Sign-Up)
+              if (_isSignUp) ...[
+                Text(
+                  'SELECT PRIMARY SPORT',
+                  style: GoogleFonts.outfit(
+                    color: AppColors.textMuted,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: SportType.values.map((sport) {
+                    final isSel = _selectedSport == sport;
+                    final sportColor = AppColors.sportColor(sport.name);
+                    return Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _selectedSport = sport),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          margin: const EdgeInsets.symmetric(horizontal: 3),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          decoration: BoxDecoration(
+                            color: isSel ? sportColor.withValues(alpha: 0.15) : Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: isSel ? sportColor : const Color(0xFFE2E8F0),
+                              width: isSel ? 1.5 : 1,
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              SportBadge(sport: sport, size: 20, showLabel: false),
+                              const SizedBox(height: 4),
+                              Text(
+                                sport.name[0].toUpperCase() + sport.name.substring(1),
+                                style: GoogleFonts.outfit(
+                                  fontSize: 11,
+                                  fontWeight: isSel ? FontWeight.w800 : FontWeight.w600,
+                                  color: isSel ? sportColor : AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
+              ],
 
               // Input Fields Card
               Container(
@@ -1156,7 +1441,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'ATHLETE CREDENTIALS',
+                      _isSignUp ? 'ATHLETE DETAILS' : 'ATHLETE CREDENTIALS',
                       style: GoogleFonts.outfit(
                         color: AppColors.textMuted,
                         fontSize: 10.5,
@@ -1165,6 +1450,75 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 14),
+
+                    // Full Name (Only in Sign Up)
+                    if (_isSignUp) ...[
+                      TextField(
+                        controller: _nameController,
+                        style: GoogleFonts.outfit(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                        decoration: InputDecoration(
+                          labelText: 'Full Name',
+                          hintText: 'e.g. Arjun Patel',
+                          prefixIcon: const Icon(Icons.person_outline_rounded, color: AppColors.primary, size: 20),
+                          filled: true,
+                          fillColor: const Color(0xFFF8FAFC),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 1.6)),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Username (Only in Sign Up)
+                      TextField(
+                        controller: _usernameController,
+                        style: GoogleFonts.outfit(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                        decoration: InputDecoration(
+                          labelText: 'Unique Username',
+                          hintText: 'e.g. arjun99',
+                          prefixIcon: const Icon(Icons.alternate_email_rounded, color: AppColors.secondary, size: 20),
+                          filled: true,
+                          fillColor: const Color(0xFFF8FAFC),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 1.6)),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Phone (Only in Sign Up)
+                      TextField(
+                        controller: _phoneController,
+                        keyboardType: TextInputType.phone,
+                        style: GoogleFonts.outfit(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                        decoration: InputDecoration(
+                          labelText: 'Mobile Number (Optional)',
+                          hintText: 'e.g. +91 9876543210',
+                          prefixIcon: const Icon(Icons.phone_outlined, color: AppColors.primary, size: 20),
+                          filled: true,
+                          fillColor: const Color(0xFFF8FAFC),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary, width: 1.6)),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                    ],
 
                     // Email Field
                     TextField(
@@ -1176,13 +1530,13 @@ class _LoginScreenState extends State<LoginScreen> {
                         fontSize: 14,
                       ),
                       decoration: InputDecoration(
-                        labelText: 'Athlete Email or Passport ID',
+                        labelText: _isSignUp ? 'Email Address' : 'Athlete Email or Passport ID',
                         labelStyle: GoogleFonts.outfit(
                           color: AppColors.textSecondary,
                           fontSize: 13,
                         ),
                         prefixIcon: const Icon(
-                          Icons.alternate_email_rounded,
+                          Icons.email_outlined,
                           color: AppColors.primary,
                           size: 20,
                         ),
@@ -1253,59 +1607,59 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
 
-                    const SizedBox(height: 8),
-
-                    // Remember Me & Forgot Password Row
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: Checkbox(
-                                value: _rememberMe,
-                                activeColor: AppColors.primary,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(4),
+                    if (!_isSignUp) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: Checkbox(
+                                  value: _rememberMe,
+                                  activeColor: AppColors.primary,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  onChanged: (v) => setState(() => _rememberMe = v ?? true),
                                 ),
-                                onChanged: (v) => setState(() => _rememberMe = v ?? true),
                               ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Remember me',
+                                style: GoogleFonts.outfit(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                          TextButton(
+                            onPressed: () {},
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Remember me',
+                            child: Text(
+                              'Forgot password?',
                               style: GoogleFonts.outfit(
-                                color: AppColors.textSecondary,
+                                color: AppColors.primary,
                                 fontSize: 12.5,
-                                fontWeight: FontWeight.w500,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
-                          ],
-                        ),
-                        TextButton(
-                          onPressed: () {},
-                          style: TextButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           ),
-                          child: Text(
-                            'Forgot password?',
-                            style: GoogleFonts.outfit(
-                              color: AppColors.primary,
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
+                    ],
 
                     const SizedBox(height: 18),
 
-                    // SPECIFIC DECIDED LOADING AREA (Loading only shown in decided blank area)
+                    // Loading or Submit Button
                     if (_isLoading)
                       SpecificAreaLoader(
                         height: 100,
@@ -1318,9 +1672,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       )
                     else
                       GradientButton(
-                        label: 'ENTER THE ARENA',
+                        label: _isSignUp ? 'CREATE ATHLETE PASSPORT' : 'ENTER THE ARENA',
                         width: double.infinity,
-                        icon: Icons.login_rounded,
+                        icon: _isSignUp ? Icons.how_to_reg_rounded : Icons.login_rounded,
                         onTap: _login,
                       ),
                   ],
@@ -1354,43 +1708,29 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 14),
 
-              // Social Buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: _SocialButton(
-                      label: 'Google Athlete',
-                      icon: Icons.g_mobiledata_rounded,
-                      onTap: _login,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _SocialButton(
-                      label: 'Apple Sports ID',
-                      icon: Icons.apple_rounded,
-                      onTap: _login,
-                    ),
-                  ),
-                ],
+              // Google Athlete Sign-In
+              _SocialButton(
+                label: 'Continue with Google',
+                icon: Icons.g_mobiledata_rounded,
+                onTap: _signInWithGoogle,
               ),
 
               const SizedBox(height: 22),
 
-              // New Athlete Registration
+              // New Athlete Registration Switcher
               Center(
                 child: GestureDetector(
-                  onTap: _login,
+                  onTap: () => setState(() => _isSignUp = !_isSignUp),
                   child: RichText(
                     text: TextSpan(
-                      text: "New athlete? ",
+                      text: _isSignUp ? 'Already registered? ' : "New athlete? ",
                       style: GoogleFonts.outfit(
                         color: AppColors.textSecondary,
                         fontSize: 13.5,
                       ),
                       children: [
                         TextSpan(
-                          text: 'Claim Your Athlete Profile',
+                          text: _isSignUp ? 'Sign In to Arena' : 'Claim Your Athlete Profile',
                           style: GoogleFonts.outfit(
                             color: AppColors.primary,
                             fontSize: 13.5,
@@ -1458,13 +1798,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 size: 16,
                 color: isSelected ? AppColors.primary : AppColors.textSecondary,
               ),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: GoogleFonts.outfit(
-                  color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
-                  fontSize: 13,
-                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  label,
+                  style: GoogleFonts.outfit(
+                    color: isSelected ? AppColors.textPrimary : AppColors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -1482,6 +1825,8 @@ class _LoginScreenState extends State<LoginScreen> {
         return 'Coach';
       case UserRole.organiser:
         return 'League Organiser';
+      case UserRole.umpire:
+        return 'Umpire / Referee';
     }
   }
 }

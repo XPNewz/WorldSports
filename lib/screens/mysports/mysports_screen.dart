@@ -693,7 +693,6 @@ class _PreviousMatchCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sportColor = AppColors.sportColor(match.sport.name);
     final formattedDate = DateFormat('d MMM yyyy').format(match.date);
     final winColor = match.isWin ? AppColors.cricket : AppColors.error;
 
@@ -1146,7 +1145,7 @@ class _LiveMatchArenaCard extends StatelessWidget {
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            '${match.venue} • Live ball-by-ball telemetry active',
+                            '${match.venue} • $statusDetail',
                             style: GoogleFonts.outfit(
                               color: AppColors.textSecondary,
                               fontSize: 11,
