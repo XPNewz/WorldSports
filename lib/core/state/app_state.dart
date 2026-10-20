@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/models.dart';
 import '../theme/app_theme.dart';
+import '../services/user_storage_service.dart';
+import '../services/supabase_service.dart';
 
 class AppState extends ChangeNotifier {
   UserRole _selectedRole = UserRole.player;
@@ -26,8 +28,32 @@ class AppState extends ChangeNotifier {
       _hasSeenOnboarding = prefs.getBool('has_seen_onboarding') ?? false;
       final savedLoggedIn = prefs.getBool('is_logged_in') ?? false;
       if (savedLoggedIn) {
-        _currentUser = MockData.demoPlayer;
-        _isLoggedIn = true;
+        final savedUser = await UserStorageService.loadCurrentUser();
+        if (savedUser != null) {
+          _currentUser = savedUser;
+          _isLoggedIn = true;
+          _selectedRole = savedUser.role;
+        } else {
+          _currentUser = MockData.demoPlayer;
+          _isLoggedIn = true;
+        }
+
+        // Background sync with Supabase if session active
+        final sbUser = SupabaseService.currentUser;
+        if (sbUser != null) {
+          SupabaseService.fetchPlayerProfile(sbUser.id).then((profile) {
+            if (profile != null && _currentUser != null) {
+              _currentUser = _currentUser!.copyWith(
+                name: profile['full_name'] ?? _currentUser!.name,
+                username: profile['username'] ?? _currentUser!.username,
+                phone: profile['phone'] ?? _currentUser!.phone,
+                hasCompletedProfile: profile['is_verified'] ?? _currentUser!.hasCompletedProfile,
+              );
+              UserStorageService.saveCurrentUser(_currentUser!);
+              notifyListeners();
+            }
+          }).catchError((_) {});
+        }
       }
     } catch (_) {}
     _isStateInitialized = true;
@@ -60,13 +86,13 @@ class AppState extends ChangeNotifier {
   void login(UserModel user) async {
     _currentUser = user;
     _isLoggedIn = true;
+    _selectedRole = user.role;
     _hasSeenOnboarding = true;
     notifyListeners();
+    await UserStorageService.saveCurrentUser(user);
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('is_logged_in', true);
       await prefs.setBool('has_seen_onboarding', true);
-      await prefs.setString('user_id', user.id);
     } catch (_) {}
   }
 
@@ -75,10 +101,29 @@ class AppState extends ChangeNotifier {
     _isLoggedIn = false;
     _bottomNavIndex = 0;
     notifyListeners();
+    await UserStorageService.clearCurrentUser();
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('is_logged_in', false);
+      await SupabaseService.signOut();
     } catch (_) {}
+  }
+
+  void updateUserProfile({
+    String? name,
+    String? bio,
+    String? location,
+    String? phone,
+    String? avatar,
+  }) {
+    if (_currentUser == null) return;
+    _currentUser = _currentUser!.copyWith(
+      name: name ?? _currentUser!.name,
+      bio: bio ?? _currentUser!.bio,
+      location: location ?? _currentUser!.location,
+      phone: phone ?? _currentUser!.phone,
+      avatar: avatar ?? _currentUser!.avatar,
+    );
+    notifyListeners();
+    UserStorageService.updateAccountUser(_currentUser!);
   }
 
   void updateCricketSpecs(CricketSpecs specs) {
@@ -89,6 +134,7 @@ class AppState extends ChangeNotifier {
       primaryRole: specs.summary,
     );
     notifyListeners();
+    UserStorageService.updateAccountUser(_currentUser!);
   }
 
   void updateFootballSpecs(FootballSpecs specs) {
@@ -99,6 +145,7 @@ class AppState extends ChangeNotifier {
       primaryRole: specs.summary,
     );
     notifyListeners();
+    UserStorageService.updateAccountUser(_currentUser!);
   }
 
   void updateBasketballSpecs(BasketballSpecs specs) {
@@ -109,6 +156,7 @@ class AppState extends ChangeNotifier {
       primaryRole: specs.summary,
     );
     notifyListeners();
+    UserStorageService.updateAccountUser(_currentUser!);
   }
 
   void updateTennisSpecs(TennisSpecs specs) {
@@ -119,6 +167,7 @@ class AppState extends ChangeNotifier {
       primaryRole: specs.summary,
     );
     notifyListeners();
+    UserStorageService.updateAccountUser(_currentUser!);
   }
 
   List<MatchModel> _matches = [];

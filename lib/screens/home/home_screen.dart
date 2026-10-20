@@ -1694,32 +1694,6 @@ class _ModernSportsBannerAd extends StatelessWidget {
                           ),
                         ),
                       ],
-                    ),rflow.ellipsis,
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${ad.rating}',
-                          style: GoogleFonts.outfit(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '(${ad.reviewsCount}+ athletes)',
-                          style: GoogleFonts.outfit(
-                            color: Colors.white.withValues(alpha: 0.65),
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
                     ),
                     const Spacer(),
                     Container(

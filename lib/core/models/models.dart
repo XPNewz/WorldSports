@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
@@ -287,6 +288,107 @@ class UserModel {
       bio: bio ?? this.bio,
     );
   }
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'user_id': userId,
+    'name': name,
+    'username': username,
+    'email': email,
+    'phone': phone,
+    'avatar': avatar,
+    'role': role.name,
+    'sports': sports.map((s) => s.name).toList(),
+    'primary_sport': primarySport.name,
+    'primary_role': primaryRole,
+    'cricket_specs': cricketSpecs?.toMap(),
+    'football_specs': footballSpecs?.toMap(),
+    'basketball_specs': basketballSpecs?.toMap(),
+    'tennis_specs': tennisSpecs?.toMap(),
+    'has_completed_profile': hasCompletedProfile,
+    'team_ids': teamIds,
+    'club_ids': clubIds,
+    'followers': followers,
+    'following': following,
+    'stats': stats.map((key, value) => MapEntry(key.name, value.toMap())),
+    'location': location,
+    'bio': bio,
+  };
+
+  factory UserModel.fromMap(Map<String, dynamic> map) {
+    final roleStr = map['role'] as String? ?? 'player';
+    final userRole = UserRole.values.firstWhere(
+      (r) => r.name == roleStr,
+      orElse: () => UserRole.player,
+    );
+
+    final sportsList = (map['sports'] as List<dynamic>?)
+        ?.map((s) => SportType.values.firstWhere(
+              (sp) => sp.name == s.toString(),
+              orElse: () => SportType.cricket,
+            ))
+        .toList() ??
+        [SportType.cricket];
+
+    final primarySportStr = map['primary_sport'] as String? ?? 'cricket';
+    final primarySport = SportType.values.firstWhere(
+      (s) => s.name == primarySportStr,
+      orElse: () => SportType.cricket,
+    );
+
+    final rawStats = map['stats'] as Map<String, dynamic>?;
+    final statsMap = <SportType, PlayerStats>{};
+    if (rawStats != null) {
+      for (final entry in rawStats.entries) {
+        final sport = SportType.values.firstWhere(
+          (s) => s.name == entry.key,
+          orElse: () => SportType.cricket,
+        );
+        if (entry.value is Map<String, dynamic>) {
+          statsMap[sport] = PlayerStats.fromMap(entry.value as Map<String, dynamic>);
+        } else if (entry.value is Map) {
+          statsMap[sport] = PlayerStats.fromMap(Map<String, dynamic>.from(entry.value as Map));
+        }
+      }
+    }
+
+    return UserModel(
+      id: map['id'] ?? 'u_guest',
+      userId: map['user_id'] ?? 'WS-1001',
+      name: map['name'] ?? 'Athlete',
+      username: map['username'] ?? 'athlete',
+      email: map['email'] ?? '',
+      phone: map['phone'] ?? '',
+      avatar: map['avatar'] ?? '',
+      role: userRole,
+      sports: sportsList.isEmpty ? [primarySport] : sportsList,
+      primarySport: primarySport,
+      primaryRole: map['primary_role'] ?? 'Athlete',
+      cricketSpecs: map['cricket_specs'] != null
+          ? CricketSpecs.fromMap(Map<String, dynamic>.from(map['cricket_specs']))
+          : null,
+      footballSpecs: map['football_specs'] != null
+          ? FootballSpecs.fromMap(Map<String, dynamic>.from(map['football_specs']))
+          : null,
+      basketballSpecs: map['basketball_specs'] != null
+          ? BasketballSpecs.fromMap(Map<String, dynamic>.from(map['basketball_specs']))
+          : null,
+      tennisSpecs: map['tennis_specs'] != null
+          ? TennisSpecs.fromMap(Map<String, dynamic>.from(map['tennis_specs']))
+          : null,
+      hasCompletedProfile: map['has_completed_profile'] ?? false,
+      teamIds: List<String>.from(map['team_ids'] ?? []),
+      clubIds: List<String>.from(map['club_ids'] ?? []),
+      followers: (map['followers'] as num?)?.toInt() ?? 0,
+      following: (map['following'] as num?)?.toInt() ?? 0,
+      stats: statsMap,
+      location: map['location'] ?? '',
+      bio: map['bio'] ?? '',
+    );
+  }
+
+  String toJson() => jsonEncode(toMap());
+  factory UserModel.fromJson(String source) => UserModel.fromMap(jsonDecode(source));
 }
 
 class PlayerStats {
@@ -340,6 +442,27 @@ class PlayerStats {
       primaryRole: specificStats,
     };
   }
+
+  Map<String, dynamic> toMap() => {
+    'sport': sport.name,
+    'matches_played': matchesPlayed,
+    'wins': wins,
+    'losses': losses,
+    'rating': rating,
+    'specific_stats': specificStats,
+  };
+
+  factory PlayerStats.fromMap(Map<String, dynamic> map) => PlayerStats(
+    sport: SportType.values.firstWhere(
+      (s) => s.name == map['sport'],
+      orElse: () => SportType.cricket,
+    ),
+    matchesPlayed: (map['matches_played'] as num?)?.toInt() ?? 0,
+    wins: (map['wins'] as num?)?.toInt() ?? 0,
+    losses: (map['losses'] as num?)?.toInt() ?? 0,
+    rating: (map['rating'] as num?)?.toDouble() ?? 7.0,
+    specificStats: Map<String, dynamic>.from(map['specific_stats'] ?? {}),
+  );
 }
 
 class TeamModel {

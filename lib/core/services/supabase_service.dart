@@ -3,9 +3,17 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupabaseService {
   // Paste your keys here
-  static const String supabaseUrl = 'https://oqfzpflizvyexlcndzamr.supabase.co';
+  static const String supabaseUrl = 'https://ofqzfplizvyxlcndzamr.supabase.co';
   static const String supabaseAnonKey =
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mcXpmcGxpenZ5eGxjbmR6YW1yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0MTI4MDYsImV4cCI6MjEwNzk4ODgwNn0.ceFrpl_sOyP0nVjF8SwlMARZj01ygZYmMGKs6U2Ae04';
+
+  static SupabaseClient? get clientOrNull {
+    try {
+      return Supabase.instance.client;
+    } catch (_) {
+      return null;
+    }
+  }
 
   static SupabaseClient get client => Supabase.instance.client;
 
@@ -21,7 +29,7 @@ class SupabaseService {
   }
 
   // ─── 1. SIGN UP (Captures full athlete passport) ───────────────────────────
-  static Future<AuthResponse> signUp({
+  static Future<AuthResponse?> signUp({
     required String email,
     required String password,
     required String fullName,
@@ -31,7 +39,9 @@ class SupabaseService {
     required String primaryRole,
     String? profilePictureUrl,
   }) async {
-    return await client.auth.signUp(
+    final c = clientOrNull;
+    if (c == null) return null;
+    final res = await c.auth.signUp(
       email: email.trim(),
       password: password,
       data: {
@@ -43,14 +53,35 @@ class SupabaseService {
         'profile_picture_url': profilePictureUrl ?? '',
       },
     );
+
+    if (res.user != null) {
+      try {
+        await c.from('profiles').upsert({
+          'id': res.user!.id,
+          'user_id': 'WS-${1000 + (DateTime.now().millisecondsSinceEpoch % 9000)}',
+          'full_name': fullName.trim(),
+          'username': username.trim().replaceAll('@', ''),
+          'phone': phone.trim(),
+          'primary_sport': primarySport,
+          'primary_role': primaryRole,
+          'is_verified': false,
+        });
+      } catch (e) {
+        debugPrint('Supabase profiles initial row upsert note: $e');
+      }
+    }
+
+    return res;
   }
 
   // ─── 2. DIRECT LOGIN ───────────────────────────────────────────────────────
-  static Future<AuthResponse> signIn({
+  static Future<AuthResponse?> signIn({
     required String email,
     required String password,
   }) async {
-    return await client.auth.signInWithPassword(
+    final c = clientOrNull;
+    if (c == null) return null;
+    return await c.auth.signInWithPassword(
       email: email.trim(),
       password: password,
     );
@@ -58,17 +89,21 @@ class SupabaseService {
 
   // ─── 3. GOOGLE SIGN-IN ─────────────────────────────────────────────────────
   static Future<bool> signInWithGoogle() async {
-    return await client.auth.signInWithOAuth(
+    final c = clientOrNull;
+    if (c == null) return false;
+    return await c.auth.signInWithOAuth(
       OAuthProvider.google,
-      redirectTo: 'worldsports://login-callback',
+      redirectTo: kIsWeb ? null : 'worldsports://login-callback',
     );
   }
 
   // ─── 4. FACEBOOK SIGN-IN ───────────────────────────────────────────────────
   static Future<bool> signInWithFacebook() async {
-    return await client.auth.signInWithOAuth(
+    final c = clientOrNull;
+    if (c == null) return false;
+    return await c.auth.signInWithOAuth(
       OAuthProvider.facebook,
-      redirectTo: 'worldsports://login-callback',
+      redirectTo: kIsWeb ? null : 'worldsports://login-callback',
     );
   }
 
@@ -79,7 +114,9 @@ class SupabaseService {
     final cleanId = identifier.trim().replaceAll('@', '');
     if (cleanId.isEmpty) return null;
     try {
-      final res = await client
+      final c = clientOrNull;
+      if (c == null) return null;
+      final res = await c
           .from('profiles')
           .select('*, player_sport_stats(*)')
           .or('user_id.ilike.$cleanId,username.ilike.$cleanId')
@@ -93,7 +130,10 @@ class SupabaseService {
 
   // ─── 6. LOGOUT ─────────────────────────────────────────────────────────────
   static Future<void> signOut() async {
-    await client.auth.signOut();
+    final c = clientOrNull;
+    if (c != null) {
+      await c.auth.signOut();
+    }
   }
 
   // ─── 7. UPDATE ATHLETE SPECIALIZATION SPECS ────────────────────────────────
@@ -103,13 +143,15 @@ class SupabaseService {
     required Map<String, dynamic> specs,
   }) async {
     try {
-      await client.from('profiles').update({
+      final c = clientOrNull;
+      if (c == null) return false;
+      await c.from('profiles').update({
         'primary_sport': sport,
         'primary_role': specs['primary_role'] ?? 'Athlete',
         'is_verified': true,
       }).eq('id', userId);
 
-      await client.from('player_sport_stats').upsert({
+      await c.from('player_sport_stats').upsert({
         'user_id': userId,
         'sport': sport,
         'stats_data': specs,
@@ -121,6 +163,6 @@ class SupabaseService {
     }
   }
 
-  static User? get currentUser => client.auth.currentUser;
+  static User? get currentUser => clientOrNull?.auth.currentUser;
   static bool get isLoggedIn => currentUser != null;
 }

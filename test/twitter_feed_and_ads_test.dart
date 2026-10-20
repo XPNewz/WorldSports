@@ -141,6 +141,7 @@ void main() {
       expect(postRenderBox, isNotNull);
 
       // Verify upcoming fixtures section displays horizontal carousel like live arena matches
+      await tester.scrollUntilVisible(find.text('Upcoming Fixtures'), 500, scrollable: find.byType(Scrollable).first);
       expect(find.text('Upcoming Fixtures'), findsOneWidget);
       final upcomingHorizontalList = find.byWidgetPredicate(
         (w) => w is ListView && w.scrollDirection == Axis.horizontal,
