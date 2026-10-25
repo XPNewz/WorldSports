@@ -200,9 +200,10 @@ class HomeScreen extends StatelessWidget {
         ? liveMatches
         : liveMatches.where((m) => m.sport == activeSport).toList();
 
+    final allUpcoming = appState.upcomingMatches;
     final filteredUpcoming = activeSport == null
-        ? MockData.upcomingMatches
-        : MockData.upcomingMatches.where((m) => m.sport == activeSport).toList();
+        ? allUpcoming
+        : allUpcoming.where((m) => m.sport == activeSport).toList();
 
     return SafeArea(
       child: CustomScrollView(

@@ -92,15 +92,61 @@ class _MySportsScreenState extends State<MySportsScreen>
           children: [
             // Top My Sports Header
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: Text(
-                'My Sports',
-                style: GoogleFonts.outfit(
-                  color: AppColors.textPrimary,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -0.5,
-                ),
+              padding: const EdgeInsets.fromLTRB(20, 16, 12, 0),
+              child: Row(
+                children: [
+                  Text(
+                    'My Sports',
+                    style: GoogleFonts.outfit(
+                      color: AppColors.textPrimary,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.sync_rounded, color: AppColors.primary, size: 24),
+                    tooltip: 'Sync with Server',
+                    onPressed: () async {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Syncing matches from server...'),
+                          duration: Duration(milliseconds: 900),
+                        ),
+                      );
+                      await context.read<AppState>().syncMatchesFromSupabase().catchError((_) {});
+                    },
+                  ),
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert_rounded, color: AppColors.textMuted, size: 20),
+                    tooltip: 'Options',
+                    onSelected: (val) async {
+                      if (val == 'clear_cache') {
+                        await context.read<AppState>().clearAllLocalMatchData();
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Local match cache cleared & synced with server!'),
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    itemBuilder: (ctx) => [
+                      const PopupMenuItem(
+                        value: 'clear_cache',
+                        child: Row(
+                          children: [
+                            Icon(Icons.cleaning_services_rounded, color: Colors.redAccent, size: 18),
+                            SizedBox(width: 8),
+                            Text('Clean Local Cache'),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
 
@@ -441,7 +487,7 @@ class _UpcomingMatchesView extends StatelessWidget {
     }
 
     return ListView.builder(
-      physics: const BouncingScrollPhysics(),
+      physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
       itemCount: matches.length,
       itemBuilder: (context, index) {
@@ -706,7 +752,7 @@ class _PreviousMatchesView extends StatelessWidget {
     }
 
     return ListView.builder(
-      physics: const BouncingScrollPhysics(),
+      physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
       itemCount: matches.length,
       itemBuilder: (context, index) {
@@ -1042,7 +1088,7 @@ class _LiveMatchesView extends StatelessWidget {
     }
 
     return ListView.builder(
-      physics: const BouncingScrollPhysics(),
+      physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
       itemCount: matches.length,
       itemBuilder: (context, index) {
@@ -1254,63 +1300,71 @@ class _EmptyMatchesState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: AppColors.primaryLight,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.sports_rounded,
-                color: AppColors.primary,
-                size: 32,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              style: GoogleFonts.outfit(
-                color: AppColors.textPrimary,
-                fontSize: 18,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(
-                color: AppColors.textMuted,
-                fontSize: 12.5,
-              ),
-            ),
-            const SizedBox(height: 18),
-            BouncingTap(
-              onTap: onReset,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceLighter,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  'SHOW ALL SPORTS',
-                  style: GoogleFonts.outfit(
-                    color: AppColors.primary,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.5,
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryLight,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.sports_rounded,
+                      color: AppColors.primary,
+                      size: 32,
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 16),
+                  Text(
+                    title,
+                    style: GoogleFonts.outfit(
+                      color: AppColors.textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    message,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.outfit(
+                      color: AppColors.textMuted,
+                      fontSize: 12.5,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  BouncingTap(
+                    onTap: onReset,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceLighter,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        'SHOW ALL SPORTS',
+                        style: GoogleFonts.outfit(
+                          color: AppColors.primary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );

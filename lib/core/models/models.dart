@@ -907,7 +907,7 @@ class MatchModel {
     this.tossWinner = '',
     this.tossDecision = '',
     this.resultText = '',
-    this.creatorId = 'u001',
+    this.creatorId = '',
     this.scorerId = '',
     this.scorerName = '',
     this.umpire1Id = '',

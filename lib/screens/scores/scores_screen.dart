@@ -369,9 +369,10 @@ class _UpcomingTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final appMatches = context.watch<AppState>().upcomingMatches;
     final matches = selectedSport == null
-        ? MockData.upcomingMatches
-        : MockData.upcomingMatches.where((m) => m.sport == selectedSport).toList();
+        ? appMatches
+        : appMatches.where((m) => m.sport == selectedSport).toList();
 
     final bannerAd = AdService.getBannerAd(sport: selectedSport);
 

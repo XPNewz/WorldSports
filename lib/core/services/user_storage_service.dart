@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/models.dart';
-import '../state/app_state.dart';
 
 /// Service responsible for storing and retrieving user data and account credentials
 /// in persistent local storage (SharedPreferences) with fallback support for demo accounts.
@@ -135,41 +134,7 @@ class UserStorageService {
       debugPrint('UserStorageService: Error during local auth lookup: $e');
     }
 
-    // Check demo accounts fallback
-    final demoUsers = [
-      {
-        'emails': ['arjun@worldsports.com'],
-        'usernames': ['arjun', 'arjun_plays'],
-        'user': MockData.demoPlayer,
-      },
-      {
-        'emails': ['priya@worldsports.com'],
-        'usernames': ['priya', 'priya_coach'],
-        'user': MockData.demoCoach,
-      },
-      {
-        'emails': ['vikram@worldsports.com'],
-        'usernames': ['vikram', 'vikram_org'],
-        'user': MockData.demoOrganiser,
-      },
-      {
-        'emails': ['anil@worldsports.com'],
-        'usernames': ['anil', 'anil_umpire'],
-        'user': MockData.demoUmpire,
-      },
-    ];
-
-    for (final demo in demoUsers) {
-      final emails = (demo['emails'] as List<String>).map((e) => e.toLowerCase()).toList();
-      final usernames = (demo['usernames'] as List<String>).map((u) => u.toLowerCase()).toList();
-      if ((emails.contains(rawInput) ||
-              usernames.contains(cleanUsername) ||
-              usernames.contains(rawInput)) &&
-          (password == 'password' || password.isNotEmpty)) {
-        return demo['user'] as UserModel;
-      }
-    }
-
+    // Only authenticate real registered accounts
     return null;
   }
 
@@ -364,20 +329,7 @@ class UserStorageService {
       debugPrint('UserStorageService: Error loading registered users: $e');
     }
 
-    // Add demo users if not present and have registered email/phone
-    final demoUsers = [
-      MockData.demoPlayer,
-      MockData.demoCoach,
-      MockData.demoOrganiser,
-      MockData.demoUmpire,
-    ];
-    for (final demo in demoUsers) {
-      if (!seenIds.contains(demo.id) && demo.hasRegisteredContact) {
-        seenIds.add(demo.id);
-        users.add(demo);
-      }
-    }
-
+    // Zero-dummy policy: return only real registered users with verified contact
     return users.where((u) => u.hasRegisteredContact).toList();
   }
 }

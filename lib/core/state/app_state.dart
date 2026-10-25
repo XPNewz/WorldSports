@@ -62,25 +62,26 @@ class AppState extends ChangeNotifier {
         _isLoggedIn = false;
       }
 
-      // Load persisted matches
+      // Load persisted matches (filtering out any mock/dummy matches)
       final savedMatchesJson = prefs.getString(_keySavedMatches);
       if (savedMatchesJson != null && savedMatchesJson.isNotEmpty) {
         try {
           final list = jsonDecode(savedMatchesJson) as List<dynamic>;
           _matches = list
               .map((x) => MatchModel.fromMap(Map<String, dynamic>.from(x as Map)))
+              .where((m) => !m.id.startsWith('m00') && m.creatorId != 'u001' && m.creatorId != 'u002' && m.creatorId != 'u003')
               .toList();
         } catch (_) {}
       }
 
-      // Load persisted previous matches
+      // Load persisted previous matches (filtering out mock previous matches)
       final savedPrevJson = prefs.getString(_keySavedPrevMatches);
       if (savedPrevJson != null && savedPrevJson.isNotEmpty) {
         try {
           final list = jsonDecode(savedPrevJson) as List<dynamic>;
           _previousMatches = list
               .map((x) => PreviousMatchModel.fromMap(Map<String, dynamic>.from(x as Map)))
-              .where((m) => !m.id.startsWith('m_prev_'))
+              .where((m) => !m.id.startsWith('m_prev_') && !m.id.startsWith('m00'))
               .toList();
         } catch (_) {}
       }
@@ -252,13 +253,27 @@ class AppState extends ChangeNotifier {
     if (user == null) return false;
     final uid = user.id.toLowerCase().trim();
     final uSportId = user.userId.toLowerCase().trim();
+    final uUname = user.username.toLowerCase().replaceAll('@', '').trim();
+    final uEmail = user.email.toLowerCase().trim();
+    final uPhone = user.phone.trim();
+    final uName = user.name.toLowerCase().trim();
 
     // Check creator, scorer, umpires
-    if (uid.isNotEmpty && match.creatorId.toLowerCase().trim() == uid) return true;
-    if (uSportId.isNotEmpty && match.creatorId.toLowerCase().trim() == uSportId) return true;
-    if (uid.isNotEmpty && match.scorerId.toLowerCase().trim() == uid) return true;
-    if (uSportId.isNotEmpty && match.scorerId.toLowerCase().trim() == uSportId) return true;
-    if (uid.isNotEmpty && (match.umpire1Id.toLowerCase().trim() == uid || match.umpire2Id.toLowerCase().trim() == uid)) return true;
+    final officials = [
+      match.creatorId.toLowerCase().trim(),
+      match.scorerId.toLowerCase().trim(),
+      match.umpire1Id.toLowerCase().trim(),
+      match.umpire2Id.toLowerCase().trim(),
+    ];
+    for (final off in officials) {
+      if (off.isEmpty) continue;
+      if (uid.isNotEmpty && off == uid) return true;
+      if (uSportId.isNotEmpty && off == uSportId) return true;
+      if (uUname.isNotEmpty && (off == uUname || off == '@$uUname')) return true;
+      if (uEmail.isNotEmpty && off == uEmail) return true;
+      if (uPhone.isNotEmpty && off == uPhone) return true;
+      if (uName.isNotEmpty && off == uName) return true;
+    }
 
     // Check squad players
     final allPlayers = [...match.team1Players, ...match.team2Players];
@@ -588,12 +603,23 @@ class AppState extends ChangeNotifier {
   }
 
   void initMatchesIfEmpty() {
+    // Zero Dummy Policy: matches start empty until created by real registered users
     if (_matches.isEmpty) {
-      _matches = [
-        ...MockData.liveMatches,
-        ...MockData.upcomingMatches,
-      ];
+      _matches = [];
     }
+  }
+
+  /// Wipes all local dummy matches, caches, and syncs freshly with Supabase
+  Future<void> clearAllLocalMatchData() async {
+    _matches.clear();
+    _previousMatches.clear();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_keySavedMatches);
+      await prefs.remove(_keySavedPrevMatches);
+    } catch (_) {}
+    notifyListeners();
+    await syncMatchesFromSupabase().catchError((_) {});
   }
 
   Future<void> _persistMatches() async {
@@ -1251,6 +1277,14 @@ class AppState extends ChangeNotifier {
     final pUname = p.username.toLowerCase().replaceAll('@', '').trim();
     final uUname = user.username.toLowerCase().replaceAll('@', '').trim();
     if (pUname.isNotEmpty && uUname.isNotEmpty && pUname == uUname) return true;
+
+    final pEmail = p.email.toLowerCase().trim();
+    final uEmail = user.email.toLowerCase().trim();
+    if (pEmail.isNotEmpty && uEmail.isNotEmpty && pEmail == uEmail) return true;
+
+    final pPhone = p.phone.trim();
+    final uPhone = user.phone.trim();
+    if (pPhone.isNotEmpty && uPhone.isNotEmpty && pPhone == uPhone) return true;
 
     final pName = p.name.trim().toLowerCase();
     final uName = user.name.trim().toLowerCase();

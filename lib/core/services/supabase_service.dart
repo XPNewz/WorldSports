@@ -392,6 +392,8 @@ class SupabaseService {
         addParticipant(p.userId);
         addParticipant(p.username);
         addParticipant(p.name);
+        addParticipant(p.email);
+        addParticipant(p.phone);
       }
 
       final data = {

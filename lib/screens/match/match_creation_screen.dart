@@ -2469,7 +2469,7 @@ class _CreateMatchScreenState extends State<CreateMatchScreen> {
       team2Players: _team2Squad,
       tossWinner: _tossWinnerIndex == 0 ? _team1NameController.text.trim() : _team2NameController.text.trim(),
       tossDecision: _tossDecision,
-      creatorId: context.read<AppState>().currentUser?.id ?? 'u001',
+      creatorId: context.read<AppState>().currentUser?.id ?? (context.read<AppState>().currentUser?.userId ?? ''),
       scorerId: _assignedScorer?.userId ?? (context.read<AppState>().currentUser?.userId.isNotEmpty == true ? context.read<AppState>().currentUser!.userId : (context.read<AppState>().currentUser?.id ?? '')),
       scorerName: _assignedScorer?.name ?? (context.read<AppState>().currentUser?.name ?? ''),
       umpire1Id: _assignedUmpire1?.userId ?? '',
