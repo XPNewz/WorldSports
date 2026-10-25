@@ -24,7 +24,6 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: gradle
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -32,11 +31,14 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: Make Gradle wrapper executable
+        run: chmod +x android/gradlew
+
       - name: Get dependencies
         run: flutter pub get
 
       - name: Build Release APK
-        run: flutter build apk --release
+        run: flutter build apk --release --no-tree-shake-icons
 
       - name: Upload APK as Workflow Artifact
         uses: actions/upload-artifact@v4
