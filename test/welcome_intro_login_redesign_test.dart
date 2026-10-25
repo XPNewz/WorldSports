@@ -114,15 +114,13 @@ void main() {
       expect(find.text('Coach'), findsOneWidget);
       expect(find.text('Organiser'), findsOneWidget);
 
-      // Default Email
-      expect(find.text('arjun@worldsports.com'), findsOneWidget);
+      // Verify inputs start clean for real user credentials (no dummy prefill)
+      expect(find.text('arjun@worldsports.com'), findsNothing);
+      expect(find.text('priya@worldsports.com'), findsNothing);
 
       // Tap Coach tab directly on role switcher
       await tester.tap(find.text('Coach'));
       await tester.pumpAndSettle();
-
-      // Verify email switched to coach email
-      expect(find.text('priya@worldsports.com'), findsOneWidget);
 
       // Submit Button is visible
       expect(find.text('ENTER THE ARENA'), findsOneWidget);

@@ -5,8 +5,10 @@ import 'package:worldsports/core/state/app_state.dart';
 import 'package:worldsports/screens/profile/profile_screen.dart';
 
 Widget createTestableProfileScreen() {
-  return ChangeNotifierProvider<AppState>(
-    create: (_) => AppState(),
+  final appState = AppState();
+  appState.login(MockData.demoPlayer);
+  return ChangeNotifierProvider<AppState>.value(
+    value: appState,
     child: const MaterialApp(
       home: ProfileScreen(),
     ),

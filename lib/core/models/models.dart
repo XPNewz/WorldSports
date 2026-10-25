@@ -224,6 +224,9 @@ class UserModel {
     return score.clamp(0, 100);
   }
 
+  bool get hasRegisteredContact =>
+      email.trim().isNotEmpty || phone.trim().isNotEmpty;
+
   String getSpecsSummaryForSport(SportType sport) {
     switch (sport) {
       case SportType.cricket:
@@ -465,6 +468,193 @@ class PlayerStats {
   );
 }
 
+class CricketCareerStats {
+  final String format; // 'overall', 't20', 'odi', 'test', 'other'
+  final int matches;
+  final int battingInnings;
+  final int runs;
+  final int ballsFaced;
+  final int timesOut;
+  final int notOuts;
+  final double battingAvg;
+  final String battingAvgDisplay;
+  final double strikeRate;
+  final String strikeRateDisplay;
+  final int fifties;
+  final int hundreds;
+  final int highestScore;
+  final bool highestScoreNotOut;
+  final String highestScoreDisplay;
+  final int fours;
+  final int sixes;
+
+  // Bowling
+  final int bowlingMatches;
+  final int bowlingInnings;
+  final int ballsBowled;
+  final String oversDisplay;
+  final int wickets;
+  final int runsConceded;
+  final int maidens;
+  final double bowlingAvg;
+  final String bowlingAvgDisplay;
+  final double bowlingStrikeRate;
+  final String bowlingStrikeRateDisplay;
+  final double economy;
+  final String economyDisplay;
+  final int bestWickets;
+  final int bestRuns;
+  final String bestFigure;
+
+  const CricketCareerStats({
+    required this.format,
+    required this.matches,
+    required this.battingInnings,
+    required this.runs,
+    required this.ballsFaced,
+    required this.timesOut,
+    required this.notOuts,
+    required this.battingAvg,
+    required this.battingAvgDisplay,
+    required this.strikeRate,
+    required this.strikeRateDisplay,
+    required this.fifties,
+    required this.hundreds,
+    required this.highestScore,
+    required this.highestScoreNotOut,
+    required this.highestScoreDisplay,
+    required this.fours,
+    required this.sixes,
+    required this.bowlingMatches,
+    required this.bowlingInnings,
+    required this.ballsBowled,
+    required this.oversDisplay,
+    required this.wickets,
+    required this.runsConceded,
+    required this.maidens,
+    required this.bowlingAvg,
+    required this.bowlingAvgDisplay,
+    required this.bowlingStrikeRate,
+    required this.bowlingStrikeRateDisplay,
+    required this.economy,
+    required this.economyDisplay,
+    required this.bestWickets,
+    required this.bestRuns,
+    required this.bestFigure,
+  });
+
+  factory CricketCareerStats.empty(String format) => CricketCareerStats(
+    format: format,
+    matches: 0,
+    battingInnings: 0,
+    runs: 0,
+    ballsFaced: 0,
+    timesOut: 0,
+    notOuts: 0,
+    battingAvg: 0.0,
+    battingAvgDisplay: '-',
+    strikeRate: 0.0,
+    strikeRateDisplay: '-',
+    fifties: 0,
+    hundreds: 0,
+    highestScore: 0,
+    highestScoreNotOut: false,
+    highestScoreDisplay: '-',
+    fours: 0,
+    sixes: 0,
+    bowlingMatches: 0,
+    bowlingInnings: 0,
+    ballsBowled: 0,
+    oversDisplay: '0.0',
+    wickets: 0,
+    runsConceded: 0,
+    maidens: 0,
+    bowlingAvg: 0.0,
+    bowlingAvgDisplay: '-',
+    bowlingStrikeRate: 0.0,
+    bowlingStrikeRateDisplay: '-',
+    economy: 0.0,
+    economyDisplay: '-',
+    bestWickets: 0,
+    bestRuns: 0,
+    bestFigure: '-',
+  );
+
+  Map<String, dynamic> toMap() => {
+    'format': format,
+    'matches': matches,
+    'batting_innings': battingInnings,
+    'runs': runs,
+    'balls_faced': ballsFaced,
+    'times_out': timesOut,
+    'not_outs': notOuts,
+    'batting_avg': battingAvg,
+    'batting_avg_display': battingAvgDisplay,
+    'strike_rate': strikeRate,
+    'strike_rate_display': strikeRateDisplay,
+    'fifties': fifties,
+    'hundreds': hundreds,
+    'highest_score': highestScore,
+    'highest_score_not_out': highestScoreNotOut,
+    'highest_score_display': highestScoreDisplay,
+    'fours': fours,
+    'sixes': sixes,
+    'bowling_matches': bowlingMatches,
+    'bowling_innings': bowlingInnings,
+    'balls_bowled': ballsBowled,
+    'overs_display': oversDisplay,
+    'wickets': wickets,
+    'runs_conceded': runsConceded,
+    'maidens': maidens,
+    'bowling_avg': bowlingAvg,
+    'bowling_avg_display': bowlingAvgDisplay,
+    'bowling_strike_rate': bowlingStrikeRate,
+    'bowling_strike_rate_display': bowlingStrikeRateDisplay,
+    'economy': economy,
+    'economy_display': economyDisplay,
+    'best_wickets': bestWickets,
+    'best_runs': bestRuns,
+    'best_figure': bestFigure,
+  };
+
+  factory CricketCareerStats.fromMap(Map<String, dynamic> map) => CricketCareerStats(
+    format: map['format']?.toString() ?? 'overall',
+    matches: (map['matches'] as num?)?.toInt() ?? 0,
+    battingInnings: (map['batting_innings'] as num?)?.toInt() ?? 0,
+    runs: (map['runs'] as num?)?.toInt() ?? 0,
+    ballsFaced: (map['balls_faced'] as num?)?.toInt() ?? 0,
+    timesOut: (map['times_out'] as num?)?.toInt() ?? 0,
+    notOuts: (map['not_outs'] as num?)?.toInt() ?? 0,
+    battingAvg: (map['batting_avg'] as num?)?.toDouble() ?? 0.0,
+    battingAvgDisplay: map['batting_avg_display']?.toString() ?? '-',
+    strikeRate: (map['strike_rate'] as num?)?.toDouble() ?? 0.0,
+    strikeRateDisplay: map['strike_rate_display']?.toString() ?? '-',
+    fifties: (map['fifties'] as num?)?.toInt() ?? 0,
+    hundreds: (map['hundreds'] as num?)?.toInt() ?? 0,
+    highestScore: (map['highest_score'] as num?)?.toInt() ?? 0,
+    highestScoreNotOut: map['highest_score_not_out'] == true,
+    highestScoreDisplay: map['highest_score_display']?.toString() ?? '-',
+    fours: (map['fours'] as num?)?.toInt() ?? 0,
+    sixes: (map['sixes'] as num?)?.toInt() ?? 0,
+    bowlingMatches: (map['bowling_matches'] as num?)?.toInt() ?? 0,
+    bowlingInnings: (map['bowling_innings'] as num?)?.toInt() ?? 0,
+    ballsBowled: (map['balls_bowled'] as num?)?.toInt() ?? 0,
+    oversDisplay: map['overs_display']?.toString() ?? '0.0',
+    wickets: (map['wickets'] as num?)?.toInt() ?? 0,
+    runsConceded: (map['runs_conceded'] as num?)?.toInt() ?? 0,
+    maidens: (map['maidens'] as num?)?.toInt() ?? 0,
+    bowlingAvg: (map['bowling_avg'] as num?)?.toDouble() ?? 0.0,
+    bowlingAvgDisplay: map['bowling_avg_display']?.toString() ?? '-',
+    bowlingStrikeRate: (map['bowling_strike_rate'] as num?)?.toDouble() ?? 0.0,
+    bowlingStrikeRateDisplay: map['bowling_strike_rate_display']?.toString() ?? '-',
+    economy: (map['economy'] as num?)?.toDouble() ?? 0.0,
+    economyDisplay: map['economy_display']?.toString() ?? '-',
+    bestWickets: (map['best_wickets'] as num?)?.toInt() ?? 0,
+    bestRuns: (map['best_runs'] as num?)?.toInt() ?? 0,
+    bestFigure: map['best_figure']?.toString() ?? '-',
+  );
+}
+
 class TeamModel {
   final String id;
   final String name;
@@ -566,6 +756,11 @@ class MatchPlayer {
   final String userId;
   final String username;
   final String specsSummary;
+  final String email;
+  final String phone;
+
+  bool get hasRegisteredContact =>
+      email.trim().isNotEmpty || phone.trim().isNotEmpty;
 
   const MatchPlayer({
     required this.id,
@@ -578,6 +773,8 @@ class MatchPlayer {
     this.userId = '',
     this.username = '',
     this.specsSummary = '',
+    this.email = '',
+    this.phone = '',
   });
 
   MatchPlayer copyWith({
@@ -591,6 +788,8 @@ class MatchPlayer {
     String? userId,
     String? username,
     String? specsSummary,
+    String? email,
+    String? phone,
   }) {
     return MatchPlayer(
       id: id ?? this.id,
@@ -603,8 +802,40 @@ class MatchPlayer {
       userId: userId ?? this.userId,
       username: username ?? this.username,
       specsSummary: specsSummary ?? this.specsSummary,
+      email: email ?? this.email,
+      phone: phone ?? this.phone,
     );
   }
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'name': name,
+    'jersey_number': jerseyNumber,
+    'role': role,
+    'is_captain': isCaptain,
+    'is_wicket_keeper_or_goalkeeper': isWicketKeeperOrGoalkeeper,
+    'avatar': avatar,
+    'user_id': userId,
+    'username': username,
+    'specs_summary': specsSummary,
+    'email': email,
+    'phone': phone,
+  };
+
+  factory MatchPlayer.fromMap(Map<String, dynamic> map) => MatchPlayer(
+    id: map['id'] ?? '',
+    name: map['name'] ?? '',
+    jerseyNumber: (map['jersey_number'] as num?)?.toInt() ?? 0,
+    role: map['role'] ?? 'Athlete',
+    isCaptain: map['is_captain'] ?? false,
+    isWicketKeeperOrGoalkeeper: map['is_wicket_keeper_or_goalkeeper'] ?? false,
+    avatar: map['avatar'] ?? '',
+    userId: map['user_id'] ?? '',
+    username: map['username'] ?? '',
+    specsSummary: map['specs_summary'] ?? '',
+    email: map['email'] ?? '',
+    phone: map['phone'] ?? '',
+  );
 
   @override
   bool operator ==(Object other) =>
@@ -740,6 +971,112 @@ class MatchModel {
       umpire1Name: umpire1Name ?? this.umpire1Name,
       umpire2Id: umpire2Id ?? this.umpire2Id,
       umpire2Name: umpire2Name ?? this.umpire2Name,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'sport': sport.name,
+    'team1_id': team1Id,
+    'team2_id': team2Id,
+    'team1_name': team1Name,
+    'team2_name': team2Name,
+    'team1_short': team1Short,
+    'team2_short': team2Short,
+    'date_time': dateTime.toIso8601String(),
+    'venue': venue,
+    'tournament_id': tournamentId,
+    'status': status.name,
+    'score_data': scoreData,
+    'format': format,
+    'team1_players': team1Players.map((p) => p.toMap()).toList(),
+    'team2_players': team2Players.map((p) => p.toMap()).toList(),
+    'toss_winner': tossWinner,
+    'toss_decision': tossDecision,
+    'result_text': resultText,
+    'creator_id': creatorId,
+    'scorer_id': scorerId,
+    'scorer_name': scorerName,
+    'umpire1_id': umpire1Id,
+    'umpire1_name': umpire1Name,
+    'umpire2_id': umpire2Id,
+    'umpire2_name': umpire2Name,
+  };
+
+  factory MatchModel.fromMap(Map<String, dynamic> map) {
+    final sportStr = map['sport']?.toString() ?? 'cricket';
+    final sp = SportType.values.firstWhere(
+      (s) => s.name.toLowerCase() == sportStr.toLowerCase(),
+      orElse: () => SportType.cricket,
+    );
+    final statusStr = map['status']?.toString() ?? 'upcoming';
+    final st = MatchStatus.values.firstWhere(
+      (s) => s.name.toLowerCase() == statusStr.toLowerCase(),
+      orElse: () => MatchStatus.upcoming,
+    );
+
+    dynamic rawT1 = map['team1_players'];
+    if (rawT1 is String && rawT1.isNotEmpty) {
+      try {
+        rawT1 = jsonDecode(rawT1);
+      } catch (_) {}
+    }
+    List<MatchPlayer> t1P = [];
+    if (rawT1 is List) {
+      t1P = rawT1
+          .whereType<Map>()
+          .map((x) => MatchPlayer.fromMap(Map<String, dynamic>.from(x)))
+          .toList();
+    }
+
+    dynamic rawT2 = map['team2_players'];
+    if (rawT2 is String && rawT2.isNotEmpty) {
+      try {
+        rawT2 = jsonDecode(rawT2);
+      } catch (_) {}
+    }
+    List<MatchPlayer> t2P = [];
+    if (rawT2 is List) {
+      t2P = rawT2
+          .whereType<Map>()
+          .map((x) => MatchPlayer.fromMap(Map<String, dynamic>.from(x)))
+          .toList();
+    }
+
+    dynamic rawScore = map['score_data'];
+    if (rawScore is String && rawScore.isNotEmpty) {
+      try {
+        rawScore = jsonDecode(rawScore);
+      } catch (_) {}
+    }
+
+    return MatchModel(
+      id: map['id']?.toString() ?? '',
+      sport: sp,
+      team1Id: map['team1_id']?.toString() ?? '',
+      team2Id: map['team2_id']?.toString() ?? '',
+      team1Name: map['team1_name']?.toString() ?? 'Team A',
+      team2Name: map['team2_name']?.toString() ?? 'Team B',
+      team1Short: map['team1_short']?.toString() ?? 'T1',
+      team2Short: map['team2_short']?.toString() ?? 'T2',
+      dateTime: DateTime.tryParse(map['date_time']?.toString() ?? '') ?? DateTime.now(),
+      venue: map['venue']?.toString() ?? '',
+      tournamentId: map['tournament_id']?.toString() ?? '',
+      status: st,
+      scoreData: rawScore,
+      format: map['format']?.toString() ?? 'Standard',
+      team1Players: t1P,
+      team2Players: t2P,
+      tossWinner: map['toss_winner']?.toString() ?? '',
+      tossDecision: map['toss_decision']?.toString() ?? '',
+      resultText: map['result_text']?.toString() ?? '',
+      creatorId: map['creator_id']?.toString() ?? 'u001',
+      scorerId: map['scorer_id']?.toString() ?? '',
+      scorerName: map['scorer_name']?.toString() ?? '',
+      umpire1Id: map['umpire1_id']?.toString() ?? '',
+      umpire1Name: map['umpire1_name']?.toString() ?? '',
+      umpire2Id: map['umpire2_id']?.toString() ?? '',
+      umpire2Name: map['umpire2_name']?.toString() ?? '',
     );
   }
 }
@@ -893,6 +1230,9 @@ class PreviousMatchModel {
   final String venue;
   final String myPerformance;
   final String? mvpPlayer;
+  final String? userId;
+  final Map<String, dynamic>? rawScoreData;
+  final String format;
 
   const PreviousMatchModel({
     required this.id,
@@ -909,7 +1249,65 @@ class PreviousMatchModel {
     required this.venue,
     required this.myPerformance,
     this.mvpPlayer,
+    this.userId,
+    this.rawScoreData,
+    this.format = 'Standard',
   });
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'sport': sport.name,
+    'team1_name': team1Name,
+    'team2_name': team2Name,
+    'team1_short': team1Short,
+    'team2_short': team2Short,
+    'team1_score': team1Score,
+    'team2_score': team2Score,
+    'result_text': resultText,
+    'is_win': isWin,
+    'date': date.toIso8601String(),
+    'venue': venue,
+    'my_performance': myPerformance,
+    'mvp_player': mvpPlayer,
+    'user_id': userId,
+    'raw_score_data': rawScoreData,
+    'format': format,
+  };
+
+  factory PreviousMatchModel.fromMap(Map<String, dynamic> map) {
+    final sportStr = map['sport']?.toString() ?? 'cricket';
+    final sp = SportType.values.firstWhere(
+      (s) => s.name.toLowerCase() == sportStr.toLowerCase(),
+      orElse: () => SportType.cricket,
+    );
+
+    dynamic rawScore = map['raw_score_data'];
+    if (rawScore is String && rawScore.isNotEmpty) {
+      try {
+        rawScore = jsonDecode(rawScore);
+      } catch (_) {}
+    }
+
+    return PreviousMatchModel(
+      id: map['id']?.toString() ?? '',
+      sport: sp,
+      team1Name: map['team1_name']?.toString() ?? '',
+      team2Name: map['team2_name']?.toString() ?? '',
+      team1Short: map['team1_short']?.toString() ?? '',
+      team2Short: map['team2_short']?.toString() ?? '',
+      team1Score: map['team1_score']?.toString() ?? '',
+      team2Score: map['team2_score']?.toString() ?? '',
+      resultText: map['result_text']?.toString() ?? '',
+      isWin: map['is_win'] == true,
+      date: DateTime.tryParse(map['date']?.toString() ?? '') ?? DateTime.now(),
+      venue: map['venue']?.toString() ?? '',
+      myPerformance: map['my_performance']?.toString() ?? '',
+      mvpPlayer: map['mvp_player']?.toString(),
+      userId: map['user_id']?.toString(),
+      rawScoreData: rawScore is Map ? Map<String, dynamic>.from(rawScore) : null,
+      format: map['format']?.toString() ?? 'Standard',
+    );
+  }
 }
 
 class NearbyMatchModel {

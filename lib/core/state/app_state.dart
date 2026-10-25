@@ -1,5 +1,9 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/models.dart';
 import '../theme/app_theme.dart';
 import '../services/user_storage_service.dart';
@@ -13,6 +17,8 @@ class AppState extends ChangeNotifier {
   SportType? _activeSportFilter;
   bool _hasSeenOnboarding = false;
   bool _isStateInitialized = false;
+  RealtimeChannel? _matchesChannel;
+  Timer? _matchSyncTimer;
 
   UserRole get selectedRole => _selectedRole;
   UserModel? get currentUser => _currentUser;
@@ -33,15 +39,9 @@ class AppState extends ChangeNotifier {
           _currentUser = savedUser;
           _isLoggedIn = true;
           _selectedRole = savedUser.role;
-        } else {
-          _currentUser = MockData.demoPlayer;
-          _isLoggedIn = true;
-        }
 
-        // Background sync with Supabase if session active
-        final sbUser = SupabaseService.currentUser;
-        if (sbUser != null) {
-          SupabaseService.fetchPlayerProfile(sbUser.id).then((profile) {
+          // Background sync with Supabase database using user ID
+          SupabaseService.fetchPlayerProfile(savedUser.id).then((profile) {
             if (profile != null && _currentUser != null) {
               _currentUser = _currentUser!.copyWith(
                 name: profile['full_name'] ?? _currentUser!.name,
@@ -53,8 +53,46 @@ class AppState extends ChangeNotifier {
               notifyListeners();
             }
           }).catchError((_) {});
+        } else {
+          _currentUser = null;
+          _isLoggedIn = false;
         }
+      } else {
+        _currentUser = null;
+        _isLoggedIn = false;
       }
+
+      // Load persisted matches
+      final savedMatchesJson = prefs.getString(_keySavedMatches);
+      if (savedMatchesJson != null && savedMatchesJson.isNotEmpty) {
+        try {
+          final list = jsonDecode(savedMatchesJson) as List<dynamic>;
+          _matches = list
+              .map((x) => MatchModel.fromMap(Map<String, dynamic>.from(x as Map)))
+              .toList();
+        } catch (_) {}
+      }
+
+      // Load persisted previous matches
+      final savedPrevJson = prefs.getString(_keySavedPrevMatches);
+      if (savedPrevJson != null && savedPrevJson.isNotEmpty) {
+        try {
+          final list = jsonDecode(savedPrevJson) as List<dynamic>;
+          _previousMatches = list
+              .map((x) => PreviousMatchModel.fromMap(Map<String, dynamic>.from(x as Map)))
+              .where((m) => !m.id.startsWith('m_prev_'))
+              .toList();
+        } catch (_) {}
+      }
+
+      if (_currentUser != null) {
+        _syncUserStatsFromMatches(_currentUser!);
+        UserStorageService.saveCurrentUser(_currentUser!);
+        UserStorageService.updateAccountUser(_currentUser!);
+        SupabaseService.syncUserProfile(_currentUser!).catchError((_) => false);
+      }
+      _initSupabaseRealtimeAndSync();
+      syncMatchesFromSupabase().catchError((_) {});
     } catch (_) {}
     _isStateInitialized = true;
     notifyListeners();
@@ -88,8 +126,14 @@ class AppState extends ChangeNotifier {
     _isLoggedIn = true;
     _selectedRole = user.role;
     _hasSeenOnboarding = true;
+    _initSupabaseRealtimeAndSync();
+    _syncUserStatsFromMatches(user);
     notifyListeners();
-    await UserStorageService.saveCurrentUser(user);
+    final u = _currentUser ?? user;
+    await UserStorageService.saveCurrentUser(u);
+    await UserStorageService.updateAccountUser(u);
+    SupabaseService.syncUserProfile(u).catchError((_) => false);
+    syncMatchesFromSupabase().catchError((_) {});
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('has_seen_onboarding', true);
@@ -100,6 +144,10 @@ class AppState extends ChangeNotifier {
     _currentUser = null;
     _isLoggedIn = false;
     _bottomNavIndex = 0;
+    _matchesChannel?.unsubscribe();
+    _matchesChannel = null;
+    _matchSyncTimer?.cancel();
+    _matchSyncTimer = null;
     notifyListeners();
     await UserStorageService.clearCurrentUser();
     try {
@@ -170,7 +218,11 @@ class AppState extends ChangeNotifier {
     UserStorageService.updateAccountUser(_currentUser!);
   }
 
+  static const String _keySavedMatches = 'saved_matches_list_v2';
+  static const String _keySavedPrevMatches = 'saved_prev_matches_list_v2';
+
   List<MatchModel> _matches = [];
+  List<PreviousMatchModel> _previousMatches = [];
 
   List<MatchModel> get allMatches {
     if (_matches.isEmpty) initMatchesIfEmpty();
@@ -192,6 +244,349 @@ class AppState extends ChangeNotifier {
     return _matches.where((m) => m.status == MatchStatus.completed).toList();
   }
 
+  List<PreviousMatchModel> get previousMatches {
+    return List.unmodifiable(_previousMatches);
+  }
+
+  bool isUserInMatch(MatchModel match, UserModel? user) {
+    if (user == null) return false;
+    final uid = user.id.toLowerCase().trim();
+    final uSportId = user.userId.toLowerCase().trim();
+
+    // Check creator, scorer, umpires
+    if (uid.isNotEmpty && match.creatorId.toLowerCase().trim() == uid) return true;
+    if (uSportId.isNotEmpty && match.creatorId.toLowerCase().trim() == uSportId) return true;
+    if (uid.isNotEmpty && match.scorerId.toLowerCase().trim() == uid) return true;
+    if (uSportId.isNotEmpty && match.scorerId.toLowerCase().trim() == uSportId) return true;
+    if (uid.isNotEmpty && (match.umpire1Id.toLowerCase().trim() == uid || match.umpire2Id.toLowerCase().trim() == uid)) return true;
+
+    // Check squad players
+    final allPlayers = [...match.team1Players, ...match.team2Players];
+    for (final p in allPlayers) {
+      if (_isPlayerMatchingUser(p, user)) return true;
+    }
+
+    // Check dynamic participants in scorecard batting/bowling
+    if (match.scoreData is Map) {
+      final sd = match.scoreData as Map;
+      for (final innKey in ['innings1', 'innings2', 'innings3', 'innings4']) {
+        final inn = sd[innKey];
+        if (inn is Map) {
+          final batting = inn['batting'];
+          if (batting is Map) {
+            for (final entry in batting.entries) {
+              final b = entry.value;
+              if (b is Map && _isStringMatchingUser(b['name']?.toString() ?? '', b['user_id']?.toString() ?? '', user)) {
+                return true;
+              }
+            }
+          }
+          final bowling = inn['bowling'];
+          if (bowling is Map) {
+            for (final entry in bowling.entries) {
+              final bl = entry.value;
+              if (bl is Map && _isStringMatchingUser(bl['name']?.toString() ?? '', bl['user_id']?.toString() ?? '', user)) {
+                return true;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /// Generates a personalized PreviousMatchModel for any user who participated in a match.
+  PreviousMatchModel createPreviousMatchForUser({
+    required MatchModel match,
+    required String userId,
+    required String userName,
+    String? userSportId,
+    String? username,
+    String? resultText,
+    Map<String, dynamic>? scoreData,
+    String? mvpPlayer,
+  }) {
+    final effectiveResult = resultText ?? match.resultText;
+    final finalScoreData = scoreData ?? (match.scoreData is Map ? Map<String, dynamic>.from(match.scoreData as Map) : <String, dynamic>{});
+
+    final resLower = effectiveResult.toLowerCase();
+    final isTeam1Win = resLower.contains(match.team1Name.toLowerCase()) ||
+        resLower.contains(match.team1Short.toLowerCase()) ||
+        resLower.contains('team a');
+    final isTeam2Win = resLower.contains(match.team2Name.toLowerCase()) ||
+        resLower.contains(match.team2Short.toLowerCase()) ||
+        resLower.contains('team b');
+
+    final t1Score = finalScoreData['team1_score']?.toString() ?? '0';
+    final t2Score = finalScoreData['team2_score']?.toString() ?? '0';
+
+    final tempUser = UserModel(
+      id: userId,
+      userId: userSportId ?? userId,
+      name: userName,
+      username: username ?? '',
+      email: '',
+      role: UserRole.player,
+      sports: [match.sport],
+    );
+
+    final inT1 = match.team1Players.where((p) => _isPlayerMatchingUser(p, tempUser)).toList();
+    final inT2 = match.team2Players.where((p) => _isPlayerMatchingUser(p, tempUser)).toList();
+
+    final userInT1 = inT1.isNotEmpty;
+    final userWon = userInT1 ? isTeam1Win : (inT2.isNotEmpty ? isTeam2Win : isTeam1Win);
+
+    int userRuns = 0;
+    int userBalls = 0;
+    int userWickets = 0;
+    int userRunsConceded = 0;
+    int userBallsBowled = 0;
+    bool userIsOut = false;
+
+    if (match.sport == SportType.cricket) {
+      for (final innKey in ['innings1', 'innings2', 'innings3', 'innings4']) {
+        final inn = finalScoreData[innKey];
+        if (inn is Map) {
+          final batting = inn['batting'];
+          if (batting is Map) {
+            for (final entry in batting.entries) {
+              final bData = entry.value;
+              if (bData is Map) {
+                final pName = bData['name']?.toString() ?? '';
+                final pUserId = bData['user_id']?.toString() ?? '';
+                if (_isStringMatchingUser(pName, pUserId, tempUser)) {
+                  userRuns += (bData['runs'] as num?)?.toInt() ?? 0;
+                  userBalls += (bData['balls'] as num?)?.toInt() ?? 0;
+                  userIsOut = bData['is_out'] == true;
+                }
+              }
+            }
+          }
+          final bowling = inn['bowling'];
+          if (bowling is Map) {
+            for (final entry in bowling.entries) {
+              final blData = entry.value;
+              if (blData is Map) {
+                final pName = blData['name']?.toString() ?? '';
+                final pUserId = blData['user_id']?.toString() ?? '';
+                if (_isStringMatchingUser(pName, pUserId, tempUser)) {
+                  userWickets += (blData['wickets'] as num?)?.toInt() ?? 0;
+                  userRunsConceded += (blData['runs'] as num?)?.toInt() ?? 0;
+                  userBallsBowled += (blData['balls'] as num?)?.toInt() ?? 0;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    String myPerf = '';
+    if (userBalls > 0 || userRuns > 0) {
+      myPerf = '$userRuns${userIsOut ? '' : '*'}($userBalls)';
+      if (userBallsBowled > 0 || userWickets > 0) {
+        final ovStr = '${userBallsBowled ~/ 6}.${userBallsBowled % 6}';
+        myPerf += ' & $userWickets/$userRunsConceded ($ovStr)';
+      }
+    } else if (userBallsBowled > 0 || userWickets > 0) {
+      final ovStr = '${userBallsBowled ~/ 6}.${userBallsBowled % 6}';
+      myPerf = 'Did not bat • $userWickets/$userRunsConceded ($ovStr)';
+    } else {
+      myPerf = 'Played as Captain / Athlete';
+    }
+
+    return PreviousMatchModel(
+      id: match.id,
+      sport: match.sport,
+      team1Name: match.team1Name,
+      team2Name: match.team2Name,
+      team1Short: match.team1Short,
+      team2Short: match.team2Short,
+      team1Score: t1Score,
+      team2Score: t2Score,
+      resultText: effectiveResult,
+      isWin: userWon,
+      date: match.dateTime,
+      venue: match.venue.isNotEmpty ? match.venue : 'Sanctioned Match Ground',
+      myPerformance: myPerf,
+      mvpPlayer: mvpPlayer ?? finalScoreData['mvp_player']?.toString(),
+      userId: userId,
+      rawScoreData: finalScoreData,
+      format: match.format,
+    );
+  }
+
+  List<PreviousMatchModel> getUserPreviousMatches(UserModel? user) {
+    if (user == null) return [];
+    final uid = user.id.toLowerCase().trim();
+    final uname = user.username.toLowerCase().replaceAll('@', '').trim();
+    final name = user.name.toLowerCase().trim();
+    final uSportId = user.userId.toLowerCase().trim();
+
+    final List<PreviousMatchModel> result = [];
+    final Set<String> seenMatchIds = {};
+
+    for (final m in _previousMatches) {
+      bool matchesUser = false;
+      if (m.userId != null && m.userId!.isNotEmpty) {
+        final mUid = m.userId!.toLowerCase().trim();
+        if (mUid == uid || mUid == uSportId || mUid == uname || mUid == name) {
+          matchesUser = true;
+        }
+      }
+      if (!matchesUser) {
+        final matchIdx = _matches.indexWhere((match) => match.id == m.id);
+        if (matchIdx >= 0 && isUserInMatch(_matches[matchIdx], user)) {
+          matchesUser = true;
+        }
+      }
+
+      if (matchesUser && !seenMatchIds.contains(m.id)) {
+        seenMatchIds.add(m.id);
+        result.add(m);
+      }
+    }
+
+    // Also include completed matches from _matches where user is a participant
+    for (final match in _matches) {
+      if (match.status == MatchStatus.completed && !seenMatchIds.contains(match.id)) {
+        if (isUserInMatch(match, user)) {
+          seenMatchIds.add(match.id);
+          final generatedPrev = createPreviousMatchForUser(
+            match: match,
+            userId: user.id,
+            userName: user.name,
+            userSportId: user.userId,
+            username: user.username,
+            resultText: match.resultText,
+            scoreData: match.scoreData is Map ? Map<String, dynamic>.from(match.scoreData as Map) : null,
+          );
+          result.add(generatedPrev);
+        }
+      }
+    }
+
+    return result;
+  }
+
+  void _initSupabaseRealtimeAndSync() {
+    _matchesChannel?.unsubscribe();
+    _matchSyncTimer?.cancel();
+
+    _matchesChannel = SupabaseService.subscribeToMatches(
+      onMatchUpserted: (remoteMatch) {
+        _handleRemoteMatchUpserted(remoteMatch);
+      },
+      onMatchDeleted: (matchId) {
+        _handleRemoteMatchDeleted(matchId);
+      },
+    );
+
+    // Periodic sync every 20s as reliable fallback (guarded in test mode)
+    final isTest = WidgetsBinding.instance.runtimeType.toString().toLowerCase().contains('test');
+    if (!isTest) {
+      _matchSyncTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+        syncMatchesFromSupabase().catchError((_) {});
+      });
+    }
+  }
+
+  void _handleRemoteMatchUpserted(MatchModel remoteMatch) {
+    if (_matches.isEmpty) initMatchesIfEmpty();
+    final idx = _matches.indexWhere((m) => m.id == remoteMatch.id);
+    if (idx >= 0) {
+      _matches[idx] = remoteMatch;
+    } else {
+      _matches.insert(0, remoteMatch);
+    }
+
+    if (remoteMatch.status == MatchStatus.completed && _currentUser != null && isUserInMatch(remoteMatch, _currentUser)) {
+      final existingPrevIdx = _previousMatches.indexWhere((m) => m.id == remoteMatch.id);
+      if (existingPrevIdx < 0) {
+        final prev = createPreviousMatchForUser(
+          match: remoteMatch,
+          userId: _currentUser!.id,
+          userName: _currentUser!.name,
+          userSportId: _currentUser!.userId,
+          username: _currentUser!.username,
+          resultText: remoteMatch.resultText,
+          scoreData: remoteMatch.scoreData is Map ? Map<String, dynamic>.from(remoteMatch.scoreData as Map) : null,
+        );
+        _previousMatches.insert(0, prev);
+      }
+      _syncUserStatsFromMatches(_currentUser!);
+      UserStorageService.saveCurrentUser(_currentUser!);
+    }
+
+    _persistMatches();
+    notifyListeners();
+  }
+
+  void _handleRemoteMatchDeleted(String matchId) {
+    _matches.removeWhere((m) => m.id == matchId);
+    _previousMatches.removeWhere((m) => m.id == matchId);
+    _persistMatches();
+    notifyListeners();
+  }
+
+  Future<void> syncMatchesFromSupabase() async {
+    try {
+      final remoteMatches = await SupabaseService.fetchMatches(limit: 100);
+      if (remoteMatches.isNotEmpty) {
+        if (_matches.isEmpty) initMatchesIfEmpty();
+        for (final rm in remoteMatches) {
+          final idx = _matches.indexWhere((m) => m.id == rm.id);
+          if (idx >= 0) {
+            _matches[idx] = rm;
+          } else {
+            _matches.insert(0, rm);
+          }
+        }
+      }
+
+      if (_currentUser != null) {
+        final remotePrev = await SupabaseService.fetchUserPreviousMatches(_currentUser!);
+        for (final p in remotePrev) {
+          final idx = _previousMatches.indexWhere((m) => m.id == p.id);
+          if (idx >= 0) {
+            _previousMatches[idx] = p;
+          } else {
+            _previousMatches.insert(0, p);
+          }
+        }
+
+        for (final m in _matches) {
+          if (m.status == MatchStatus.completed && isUserInMatch(m, _currentUser)) {
+            final exists = _previousMatches.any((p) => p.id == m.id);
+            if (!exists) {
+              final prev = createPreviousMatchForUser(
+                match: m,
+                userId: _currentUser!.id,
+                userName: _currentUser!.name,
+                userSportId: _currentUser!.userId,
+                username: _currentUser!.username,
+                resultText: m.resultText,
+                scoreData: m.scoreData is Map ? Map<String, dynamic>.from(m.scoreData as Map) : null,
+              );
+              _previousMatches.insert(0, prev);
+              SupabaseService.savePreviousMatch(prev, userId: _currentUser!.id).catchError((_) => false);
+            }
+          }
+        }
+
+        _syncUserStatsFromMatches(_currentUser!);
+        UserStorageService.saveCurrentUser(_currentUser!);
+      }
+
+      _persistMatches();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('AppState: syncMatchesFromSupabase note: $e');
+    }
+  }
+
   void initMatchesIfEmpty() {
     if (_matches.isEmpty) {
       _matches = [
@@ -201,10 +596,33 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  Future<void> _persistMatches() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final matchesList = _matches.map((m) => m.toMap()).toList();
+      await prefs.setString(_keySavedMatches, jsonEncode(matchesList));
+      final prevList = _previousMatches.map((m) => m.toMap()).toList();
+      await prefs.setString(_keySavedPrevMatches, jsonEncode(prevList));
+    } catch (_) {}
+  }
+
   void addMatch(MatchModel match) {
     if (_matches.isEmpty) initMatchesIfEmpty();
+    _matches.removeWhere((m) => m.id == match.id);
     _matches.insert(0, match);
+    _persistMatches();
     notifyListeners();
+    SupabaseService.saveMatch(match).catchError((_) => false);
+  }
+
+  void addPreviousMatch(PreviousMatchModel match) {
+    _previousMatches.removeWhere((m) => m.id == match.id);
+    _previousMatches.insert(0, match);
+    _persistMatches();
+    notifyListeners();
+    if (_currentUser != null) {
+      SupabaseService.savePreviousMatch(match, userId: _currentUser!.id).catchError((_) => false);
+    }
   }
 
   void updateMatchScore(String matchId, dynamic scoreData, {MatchStatus? status, String? resultText}) {
@@ -217,7 +635,9 @@ class AppState extends ChangeNotifier {
         status: status ?? current.status,
         resultText: resultText ?? current.resultText,
       );
+      _persistMatches();
       notifyListeners();
+      SupabaseService.updateMatchScore(matchId, scoreData, status: status, resultText: resultText).catchError((_) => false);
     }
   }
 
@@ -226,13 +646,638 @@ class AppState extends ChangeNotifier {
     final index = _matches.indexWhere((m) => m.id == matchId);
     if (index != -1) {
       final current = _matches[index];
-      _matches[index] = current.copyWith(
+      final updated = current.copyWith(
         status: MatchStatus.completed,
         resultText: resultText ?? current.resultText,
       );
+      _matches[index] = updated;
+      _persistMatches();
+      notifyListeners();
+      SupabaseService.saveMatch(updated).catchError((_) => false);
+    }
+  }
+
+
+  /// Records official match completion, updates scores, MVP, personal performance
+  /// in Previous Matches, and increments user stats, skills, and match count in MySports.
+  void recordMatchCompletion({
+    required String matchId,
+    required String resultText,
+    required Map<String, dynamic> finalScoreData,
+    String? mvpPlayer,
+  }) {
+    if (_matches.isEmpty) initMatchesIfEmpty();
+    final index = _matches.indexWhere((m) => m.id == matchId);
+    MatchModel match;
+    if (index != -1) {
+      final current = _matches[index];
+      match = current.copyWith(
+        status: MatchStatus.completed,
+        resultText: resultText,
+        scoreData: finalScoreData,
+      );
+      _matches[index] = match;
+    } else {
+      match = MatchModel.fromMap(finalScoreData);
+      _matches.insert(0, match);
+    }
+
+    // Determine who won
+    final resLower = resultText.toLowerCase();
+    final isTeam1Win = resLower.contains(match.team1Name.toLowerCase()) ||
+        resLower.contains(match.team1Short.toLowerCase()) ||
+        resLower.contains('team a');
+    final isTeam2Win = resLower.contains(match.team2Name.toLowerCase()) ||
+        resLower.contains(match.team2Short.toLowerCase()) ||
+        resLower.contains('team b');
+
+    final t1Score = finalScoreData['team1_score']?.toString() ?? '0';
+    final t2Score = finalScoreData['team2_score']?.toString() ?? '0';
+
+    if (finalScoreData['format'] != null && match.format == 'Standard') {
+      match = match.copyWith(format: finalScoreData['format'].toString());
+    }
+
+    // Check if _currentUser participated
+    final inT1 = match.team1Players.where((p) => _isPlayerMatchingUser(p, _currentUser)).toList();
+    final inT2 = match.team2Players.where((p) => _isPlayerMatchingUser(p, _currentUser)).toList();
+    
+    bool userInBattingOrBowling = false;
+    for (final innKey in ['innings1', 'innings2', 'innings3', 'innings4']) {
+      final inn = finalScoreData[innKey];
+      if (inn is Map) {
+        final batting = inn['batting'];
+        if (batting is Map) {
+          for (final entry in batting.entries) {
+            final b = entry.value;
+            if (b is Map && _isStringMatchingUser(b['name']?.toString() ?? '', b['user_id']?.toString() ?? '', _currentUser)) {
+              userInBattingOrBowling = true;
+            }
+          }
+        }
+        final bowling = inn['bowling'];
+        if (bowling is Map) {
+          for (final entry in bowling.entries) {
+            final bl = entry.value;
+            if (bl is Map && _isStringMatchingUser(bl['name']?.toString() ?? '', bl['user_id']?.toString() ?? '', _currentUser)) {
+              userInBattingOrBowling = true;
+            }
+          }
+        }
+      }
+    }
+
+    final isParticipant = inT1.isNotEmpty || inT2.isNotEmpty || match.creatorId == _currentUser?.id || userInBattingOrBowling;
+
+    if (_currentUser != null && isParticipant) {
+      final userInT1 = inT1.isNotEmpty;
+      final userWon = userInT1 ? isTeam1Win : (inT2.isNotEmpty ? isTeam2Win : isTeam1Win);
+
+      // Extract user's performance
+      int userRuns = 0;
+      int userBalls = 0;
+      int userWickets = 0;
+      int userRunsConceded = 0;
+      int userBallsBowled = 0;
+      bool userIsOut = false;
+
+      if (match.sport == SportType.cricket) {
+        for (final innKey in ['innings1', 'innings2', 'innings3', 'innings4']) {
+          final inn = finalScoreData[innKey];
+          if (inn is Map) {
+            final batting = inn['batting'];
+            if (batting is Map) {
+              for (final entry in batting.entries) {
+                final bData = entry.value;
+                if (bData is Map) {
+                  final pName = bData['name']?.toString() ?? '';
+                  final pUserId = bData['user_id']?.toString() ?? '';
+                  if (_isStringMatchingUser(pName, pUserId, _currentUser)) {
+                    userRuns += (bData['runs'] as num?)?.toInt() ?? 0;
+                    userBalls += (bData['balls'] as num?)?.toInt() ?? 0;
+                    userIsOut = bData['is_out'] == true;
+                  }
+                }
+              }
+            }
+            final bowling = inn['bowling'];
+            if (bowling is Map) {
+              for (final entry in bowling.entries) {
+                final blData = entry.value;
+                if (blData is Map) {
+                  final pName = blData['name']?.toString() ?? '';
+                  final pUserId = blData['user_id']?.toString() ?? '';
+                  if (_isStringMatchingUser(pName, pUserId, _currentUser)) {
+                    userWickets += (blData['wickets'] as num?)?.toInt() ?? 0;
+                    userRunsConceded += (blData['runs'] as num?)?.toInt() ?? 0;
+                    userBallsBowled += (blData['balls'] as num?)?.toInt() ?? 0;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      String myPerf = '';
+      if (userBalls > 0 || userRuns > 0) {
+        myPerf = '$userRuns${userIsOut ? '' : '*'}($userBalls)';
+        if (userBallsBowled > 0 || userWickets > 0) {
+          final ovStr = '${userBallsBowled ~/ 6}.${userBallsBowled % 6}';
+          myPerf += ' & $userWickets/$userRunsConceded ($ovStr)';
+        }
+      } else if (userBallsBowled > 0 || userWickets > 0) {
+        final ovStr = '${userBallsBowled ~/ 6}.${userBallsBowled % 6}';
+        myPerf = 'Did not bat • $userWickets/$userRunsConceded ($ovStr)';
+      } else {
+        myPerf = 'Played as Captain / Athlete';
+      }
+
+      final prevMatch = PreviousMatchModel(
+        id: match.id,
+        sport: match.sport,
+        team1Name: match.team1Name,
+        team2Name: match.team2Name,
+        team1Short: match.team1Short,
+        team2Short: match.team2Short,
+        team1Score: t1Score,
+        team2Score: t2Score,
+        resultText: resultText,
+        isWin: userWon,
+        date: match.dateTime,
+        venue: match.venue.isNotEmpty ? match.venue : 'Sanctioned Match Ground',
+        myPerformance: myPerf,
+        mvpPlayer: mvpPlayer ?? finalScoreData['mvp_player']?.toString(),
+        userId: _currentUser?.id,
+        rawScoreData: finalScoreData,
+        format: match.format,
+      );
+
+      // Add to _previousMatches
+      _previousMatches.removeWhere((m) => m.id == match.id);
+      _previousMatches.insert(0, prevMatch);
+
+      // Update User Stats
+      final existingStats = _currentUser!.stats[match.sport] ??
+          PlayerStats(sport: match.sport, matchesPlayed: 0, wins: 0, losses: 0, rating: 7.2);
+
+      final userPreviousMatches = getUserPreviousMatches(_currentUser);
+      final sportMatches = userPreviousMatches.where((m) => m.sport == match.sport).toList();
+      final newMatchesPlayed = sportMatches.length;
+      final newWins = sportMatches.where((m) => m.isWin).length;
+      final newLosses = sportMatches.where((m) => !m.isWin && !m.resultText.toLowerCase().contains('abandon')).length;
+
+      final specific = Map<String, dynamic>.from(existingStats.specificStats);
+
+      if (match.sport == SportType.cricket) {
+        final overallStats = calculateCricketStats(user: _currentUser, matches: _previousMatches, format: 'overall');
+        final t20Stats = calculateCricketStats(user: _currentUser, matches: _previousMatches, format: 't20');
+        final odiStats = calculateCricketStats(user: _currentUser, matches: _previousMatches, format: 'odi');
+        final testStats = calculateCricketStats(user: _currentUser, matches: _previousMatches, format: 'test');
+        final otherStats = calculateCricketStats(user: _currentUser, matches: _previousMatches, format: 'other');
+
+        specific['total_runs'] = overallStats.runs;
+        specific['runs'] = overallStats.runs;
+        specific['batting_avg'] = overallStats.battingAvgDisplay;
+        specific['strike_rate'] = overallStats.strikeRateDisplay;
+        specific['hundreds'] = overallStats.hundreds;
+        specific['fifties'] = overallStats.fifties;
+        specific['highest_score'] = overallStats.highestScoreDisplay;
+        specific['balls_faced'] = overallStats.ballsFaced;
+        specific['batting_innings'] = overallStats.battingInnings;
+        specific['fours'] = overallStats.fours;
+        specific['sixes'] = overallStats.sixes;
+        specific['not_outs'] = overallStats.notOuts;
+
+        specific['total_wickets'] = overallStats.wickets;
+        specific['wickets'] = overallStats.wickets;
+        specific['bowling_innings'] = overallStats.bowlingInnings;
+        specific['balls_bowled'] = overallStats.ballsBowled;
+        specific['runs_conceded'] = overallStats.runsConceded;
+        specific['maidens'] = overallStats.maidens;
+        specific['bowling_avg'] = overallStats.bowlingAvgDisplay;
+        specific['bowling_strike_rate'] = overallStats.bowlingStrikeRateDisplay;
+        specific['economy'] = overallStats.economyDisplay;
+        specific['best_bowling'] = overallStats.bestFigure;
+        specific['best_figure'] = overallStats.bestFigure;
+        specific['formats'] = {
+          'overall': overallStats.toMap(),
+          't20': t20Stats.toMap(),
+          'odi': odiStats.toMap(),
+          'test': testStats.toMap(),
+          'other': otherStats.toMap(),
+        };
+      } else {
+        final prevRuns = (specific['total_runs'] as num?)?.toInt() ?? (specific['runs'] as num?)?.toInt() ?? 0;
+        final prevWickets = (specific['total_wickets'] as num?)?.toInt() ?? (specific['wickets'] as num?)?.toInt() ?? 0;
+        final prevHighScore = (specific['highest_score'] as num?)?.toInt() ?? 0;
+
+        specific['total_runs'] = prevRuns + userRuns;
+        specific['runs'] = prevRuns + userRuns;
+        specific['total_wickets'] = prevWickets + userWickets;
+        specific['wickets'] = prevWickets + userWickets;
+        specific['highest_score'] = math.max(prevHighScore, userRuns);
+      }
+
+      specific['last_match_date'] = DateTime.now().toIso8601String();
+
+      // Recalculate dynamic rating
+      double newRating = (existingStats.rating * newMatchesPlayed + (userWon ? 8.5 : 7.0) + (userRuns >= 30 ? 1.0 : 0.0) + (userWickets >= 2 ? 1.0 : 0.0)) / (newMatchesPlayed + 1);
+      newRating = double.parse(newRating.clamp(6.0, 9.9).toStringAsFixed(1));
+
+      final updatedStatsMap = Map<SportType, PlayerStats>.from(_currentUser!.stats);
+      updatedStatsMap[match.sport] = PlayerStats(
+        sport: match.sport,
+        matchesPlayed: newMatchesPlayed,
+        wins: newWins,
+        losses: newLosses,
+        rating: newRating,
+        specificStats: specific,
+      );
+
+      _currentUser = _currentUser!.copyWith(stats: updatedStatsMap);
+      UserStorageService.saveCurrentUser(_currentUser!);
+      UserStorageService.updateAccountUser(_currentUser!);
+    }
+
+    _persistMatches();
+    notifyListeners();
+
+    // Sync match and participant records to Supabase
+    SupabaseService.saveMatch(match).catchError((_) => false);
+    if (_currentUser != null) {
+      SupabaseService.syncUserProfile(_currentUser!).catchError((_) => false);
+      final myPrevList = _previousMatches.where((p) => p.id == match.id);
+      if (myPrevList.isNotEmpty) {
+        SupabaseService.savePreviousMatch(myPrevList.first, userId: _currentUser!.id).catchError((_) => false);
+      }
+    }
+
+    // Also generate and save previous match records for ALL other participants in the match to Supabase!
+    final allParticipants = [...match.team1Players, ...match.team2Players];
+    for (final p in allParticipants) {
+      if (p.id.isNotEmpty && p.id != _currentUser?.id) {
+        try {
+          final pPrev = createPreviousMatchForUser(
+            match: match,
+            userId: p.id,
+            userName: p.name,
+            userSportId: p.userId,
+            username: p.username,
+            resultText: resultText,
+            scoreData: finalScoreData,
+            mvpPlayer: mvpPlayer,
+          );
+          SupabaseService.savePreviousMatch(pPrev, userId: p.id).catchError((_) => false);
+          if (p.userId.isNotEmpty && p.userId != p.id) {
+            SupabaseService.savePreviousMatch(pPrev, userId: p.userId).catchError((_) => false);
+          }
+        } catch (_) {}
+      }
+    }
+  }
+
+  static String normalizeCricketFormatKey(String format) {
+    final f = format.toLowerCase().trim();
+    if (f.contains('t20') || f.contains('twenty') || f.contains('t-20') || f.contains('20 over')) {
+      return 't20';
+    }
+    if (f.contains('odi') || f.contains('one day') || f.contains('50 over')) {
+      return 'odi';
+    }
+    if (f.contains('test')) {
+      return 'test';
+    }
+    return 'other';
+  }
+
+  CricketCareerStats calculateCricketStats({
+    required UserModel? user,
+    required List<PreviousMatchModel> matches,
+    String format = 'overall',
+  }) {
+    if (user == null) return CricketCareerStats.empty(format);
+
+    final targetKey = format.toLowerCase().trim();
+    final userMatches = getUserPreviousMatches(user).where((m) => m.sport == SportType.cricket).toList();
+
+    int matchCount = 0;
+    int battingInnings = 0;
+    int runs = 0;
+    int ballsFaced = 0;
+    int timesOut = 0;
+    int fifties = 0;
+    int hundreds = 0;
+    int highestScore = 0;
+    bool highestScoreNotOut = false;
+    int fours = 0;
+    int sixes = 0;
+
+    int bowlingMatches = 0;
+    int bowlingInnings = 0;
+    int ballsBowled = 0;
+    int wickets = 0;
+    int runsConceded = 0;
+    int maidens = 0;
+    int bestWkts = -1;
+    int bestRuns = 999999;
+    bool hasBestFigure = false;
+
+    for (final m in userMatches) {
+      final rawFmt = m.format.isNotEmpty ? m.format : (m.rawScoreData?['format']?.toString() ?? '');
+      final oversLimit = (m.rawScoreData?['overs_limit'] as num?)?.toInt();
+      String mFmt = normalizeCricketFormatKey(rawFmt);
+      if (mFmt == 'other' && oversLimit != null) {
+        if (oversLimit == 20) mFmt = 't20';
+        else if (oversLimit == 50) mFmt = 'odi';
+      }
+
+      if (targetKey != 'overall' && mFmt != targetKey) {
+        continue;
+      }
+
+      matchCount++;
+
+      bool userBowledInMatch = false;
+
+      if (m.rawScoreData is Map) {
+        final innKeys = ['innings1', 'innings2', 'innings3', 'innings4'];
+        for (final innKey in innKeys) {
+          final inn = m.rawScoreData![innKey];
+          if (inn is Map) {
+            // Batting
+            final batting = inn['batting'];
+            if (batting is Map) {
+              for (final entry in batting.entries) {
+                final b = entry.value;
+                if (b is Map) {
+                  final pName = b['name']?.toString() ?? '';
+                  final pUid = b['user_id']?.toString() ?? '';
+                  if (_isStringMatchingUser(pName, pUid, user)) {
+                    final bBalls = (b['balls'] as num?)?.toInt() ?? 0;
+                    final bRuns = (b['runs'] as num?)?.toInt() ?? 0;
+                    final bOut = b['is_out'] == true;
+                    final bDismissal = b['dismissal']?.toString().toLowerCase() ?? '';
+                    final didBat = bBalls > 0 || bRuns > 0 || bOut || (bDismissal.isNotEmpty && bDismissal != 'yet to bat');
+                    if (didBat) {
+                      battingInnings++;
+                      runs += bRuns;
+                      ballsFaced += bBalls;
+                      fours += (b['fours'] as num?)?.toInt() ?? 0;
+                      sixes += (b['sixes'] as num?)?.toInt() ?? 0;
+                      if (bOut) timesOut++;
+                      if (bRuns >= 100) {
+                        hundreds++;
+                      } else if (bRuns >= 50) {
+                        fifties++;
+                      }
+                      if (bRuns > highestScore) {
+                        highestScore = bRuns;
+                        highestScoreNotOut = !bOut;
+                      } else if (bRuns == highestScore && !bOut) {
+                        highestScoreNotOut = true;
+                      }
+                    }
+                  }
+                }
+              }
+            }
+
+            // Bowling
+            final bowling = inn['bowling'];
+            if (bowling is Map) {
+              for (final entry in bowling.entries) {
+                final bl = entry.value;
+                if (bl is Map) {
+                  final pName = bl['name']?.toString() ?? '';
+                  final pUid = bl['user_id']?.toString() ?? '';
+                  if (_isStringMatchingUser(pName, pUid, user)) {
+                    final blBalls = (bl['balls'] as num?)?.toInt() ?? 0;
+                    final blRuns = (bl['runs'] as num?)?.toInt() ?? 0;
+                    final blWkts = (bl['wickets'] as num?)?.toInt() ?? 0;
+                    final blMdns = (bl['maidens'] as num?)?.toInt() ?? 0;
+                    if (blBalls > 0) {
+                      userBowledInMatch = true;
+                      bowlingInnings++;
+                      ballsBowled += blBalls;
+                      runsConceded += blRuns;
+                      wickets += blWkts;
+                      maidens += blMdns;
+
+                      if (!hasBestFigure || blWkts > bestWkts || (blWkts == bestWkts && blRuns < bestRuns)) {
+                        bestWkts = blWkts;
+                        bestRuns = blRuns;
+                        hasBestFigure = true;
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      if (userBowledInMatch) {
+        bowlingMatches++;
+      }
+    }
+
+    final notOuts = math.max(0, battingInnings - timesOut);
+    final double battingAvg = timesOut > 0 ? (runs / timesOut) : (battingInnings > 0 ? runs.toDouble() : 0.0);
+    final String battingAvgDisplay = timesOut > 0
+        ? battingAvg.toStringAsFixed(1)
+        : (battingInnings > 0 && runs > 0 ? '$runs*' : (battingInnings > 0 ? '0.0' : '-'));
+
+    final double strikeRate = ballsFaced > 0 ? ((runs / ballsFaced) * 100) : 0.0;
+    final String strikeRateDisplay = ballsFaced > 0 ? strikeRate.toStringAsFixed(1) : (battingInnings > 0 ? '0.0' : '-');
+
+    final String highestScoreDisplay = battingInnings > 0 ? '$highestScore${highestScoreNotOut ? '*' : ''}' : '-';
+
+    final int oversFull = ballsBowled ~/ 6;
+    final int oversRemain = ballsBowled % 6;
+    final String oversDisplay = '$oversFull.$oversRemain';
+
+    final double bowlingAvg = wickets > 0 ? (runsConceded / wickets) : 0.0;
+    final String bowlingAvgDisplay = wickets > 0 ? bowlingAvg.toStringAsFixed(2) : '-';
+
+    final double bowlingSR = wickets > 0 ? (ballsBowled / wickets) : 0.0;
+    final String bowlingSRDisplay = wickets > 0 ? bowlingSR.toStringAsFixed(1) : '-';
+
+    final double economy = ballsBowled > 0 ? (runsConceded / (ballsBowled / 6.0)) : 0.0;
+    final String economyDisplay = ballsBowled > 0 ? economy.toStringAsFixed(2) : '-';
+
+    final String bestFigureStr = hasBestFigure ? '$bestWkts/$bestRuns' : '-';
+
+    return CricketCareerStats(
+      format: targetKey,
+      matches: matchCount,
+      battingInnings: battingInnings,
+      runs: runs,
+      ballsFaced: ballsFaced,
+      timesOut: timesOut,
+      notOuts: notOuts,
+      battingAvg: battingAvg,
+      battingAvgDisplay: battingAvgDisplay,
+      strikeRate: strikeRate,
+      strikeRateDisplay: strikeRateDisplay,
+      fifties: fifties,
+      hundreds: hundreds,
+      highestScore: highestScore,
+      highestScoreNotOut: highestScoreNotOut,
+      highestScoreDisplay: highestScoreDisplay,
+      fours: fours,
+      sixes: sixes,
+      bowlingMatches: bowlingMatches,
+      bowlingInnings: bowlingInnings,
+      ballsBowled: ballsBowled,
+      oversDisplay: oversDisplay,
+      wickets: wickets,
+      runsConceded: runsConceded,
+      maidens: maidens,
+      bowlingAvg: bowlingAvg,
+      bowlingAvgDisplay: bowlingAvgDisplay,
+      bowlingStrikeRate: bowlingSR,
+      bowlingStrikeRateDisplay: bowlingSRDisplay,
+      economy: economy,
+      economyDisplay: economyDisplay,
+      bestWickets: hasBestFigure ? bestWkts : 0,
+      bestRuns: hasBestFigure ? bestRuns : 0,
+      bestFigure: bestFigureStr,
+    );
+  }
+
+  CricketCareerStats getCricketStatsForUser({String format = 'overall', UserModel? user}) {
+    return calculateCricketStats(
+      user: user ?? _currentUser,
+      matches: _previousMatches,
+      format: format,
+    );
+  }
+
+  /// Automatically synchronizes and recalculates career statistics for a user
+  /// across all sports based on verified match records.
+  void _syncUserStatsFromMatches(UserModel user) {
+    final userMatches = getUserPreviousMatches(user);
+    if (userMatches.isEmpty) return;
+
+    final updatedStatsMap = Map<SportType, PlayerStats>.from(user.stats);
+
+    for (final sp in SportType.values) {
+      final spMatches = userMatches.where((m) => m.sport == sp).toList();
+      if (spMatches.isEmpty) continue;
+
+      final existing = updatedStatsMap[sp] ??
+          PlayerStats(sport: sp, matchesPlayed: 0, wins: 0, losses: 0, rating: 7.2);
+      final played = spMatches.length;
+      final wins = spMatches.where((m) => m.isWin).length;
+      final losses = spMatches.where((m) => !m.isWin && !m.resultText.toLowerCase().contains('abandon')).length;
+
+      final specific = Map<String, dynamic>.from(existing.specificStats);
+
+      if (sp == SportType.cricket) {
+        final overallStats = calculateCricketStats(user: user, matches: userMatches, format: 'overall');
+        final t20Stats = calculateCricketStats(user: user, matches: userMatches, format: 't20');
+        final odiStats = calculateCricketStats(user: user, matches: userMatches, format: 'odi');
+        final testStats = calculateCricketStats(user: user, matches: userMatches, format: 'test');
+        final otherStats = calculateCricketStats(user: user, matches: userMatches, format: 'other');
+
+        specific['total_runs'] = overallStats.runs;
+        specific['runs'] = overallStats.runs;
+        specific['batting_avg'] = overallStats.battingAvgDisplay;
+        specific['strike_rate'] = overallStats.strikeRateDisplay;
+        specific['hundreds'] = overallStats.hundreds;
+        specific['fifties'] = overallStats.fifties;
+        specific['highest_score'] = overallStats.highestScoreDisplay;
+        specific['balls_faced'] = overallStats.ballsFaced;
+        specific['batting_innings'] = overallStats.battingInnings;
+        specific['fours'] = overallStats.fours;
+        specific['sixes'] = overallStats.sixes;
+        specific['not_outs'] = overallStats.notOuts;
+
+        specific['total_wickets'] = overallStats.wickets;
+        specific['wickets'] = overallStats.wickets;
+        specific['bowling_innings'] = overallStats.bowlingInnings;
+        specific['balls_bowled'] = overallStats.ballsBowled;
+        specific['runs_conceded'] = overallStats.runsConceded;
+        specific['maidens'] = overallStats.maidens;
+        specific['bowling_avg'] = overallStats.bowlingAvgDisplay;
+        specific['bowling_strike_rate'] = overallStats.bowlingStrikeRateDisplay;
+        specific['economy'] = overallStats.economyDisplay;
+        specific['best_bowling'] = overallStats.bestFigure;
+        specific['best_figure'] = overallStats.bestFigure;
+        specific['formats'] = {
+          'overall': overallStats.toMap(),
+          't20': t20Stats.toMap(),
+          'odi': odiStats.toMap(),
+          'test': testStats.toMap(),
+          'other': otherStats.toMap(),
+        };
+      }
+
+      updatedStatsMap[sp] = PlayerStats(
+        sport: sp,
+        matchesPlayed: played,
+        wins: wins,
+        losses: losses,
+        rating: existing.rating,
+        specificStats: specific,
+      );
+    }
+
+    _currentUser = (_currentUser ?? user).copyWith(stats: updatedStatsMap);
+  }
+
+  /// Recalculates and synchronizes career stats from all available matches
+  void syncUserCareerStats([UserModel? user]) {
+    final target = user ?? _currentUser;
+    if (target != null) {
+      _syncUserStatsFromMatches(target);
       notifyListeners();
     }
   }
+
+
+  bool _isPlayerMatchingUser(MatchPlayer p, UserModel? user) {
+    if (user == null) return false;
+    final uid = user.id.toLowerCase().trim();
+    final uSportId = user.userId.toLowerCase().trim();
+    final pId = p.id.toLowerCase().trim();
+    final pUserId = p.userId.toLowerCase().trim();
+
+    if (uid.isNotEmpty && (pId == uid || pUserId == uid)) return true;
+    if (uSportId.isNotEmpty && (pId == uSportId || pUserId == uSportId)) return true;
+
+    final pUname = p.username.toLowerCase().replaceAll('@', '').trim();
+    final uUname = user.username.toLowerCase().replaceAll('@', '').trim();
+    if (pUname.isNotEmpty && uUname.isNotEmpty && pUname == uUname) return true;
+
+    final pName = p.name.trim().toLowerCase();
+    final uName = user.name.trim().toLowerCase();
+    if (pName.isNotEmpty && uName.isNotEmpty && pName == uName) return true;
+
+    return false;
+  }
+
+  bool _isStringMatchingUser(String name, String userId, UserModel? user) {
+    if (user == null) return false;
+    final uid = user.id.toLowerCase().trim();
+    final uSportId = user.userId.toLowerCase().trim();
+    final cleanUid = userId.toLowerCase().trim();
+
+    if (cleanUid.isNotEmpty && (cleanUid == uid || cleanUid == uSportId)) return true;
+
+    final cleanName = name.trim().toLowerCase();
+    final uName = user.name.trim().toLowerCase();
+    if (cleanName.isNotEmpty && uName.isNotEmpty && cleanName == uName) return true;
+
+    final uUname = user.username.toLowerCase().replaceAll('@', '').trim();
+    final cleanNameNoAt = cleanName.replaceAll('@', '');
+    if (cleanNameNoAt.isNotEmpty && uUname.isNotEmpty && cleanNameNoAt == uUname) return true;
+
+    return false;
+  }
+
 
   void setBottomNavIndex(int index) {
     _bottomNavIndex = index;
@@ -303,7 +1348,17 @@ class AppState extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  @override
+  void dispose() {
+    _matchesChannel?.unsubscribe();
+    _matchesChannel = null;
+    _matchSyncTimer?.cancel();
+    _matchSyncTimer = null;
+    super.dispose();
+  }
 }
+
 
 // ─── Mock Data Provider ───────────────────────────────────────────────────────
 

@@ -3,6 +3,8 @@ import '../models/models.dart';
 import '../theme/app_theme.dart';
 import '../../screens/match/match_creation_screen.dart';
 import '../state/app_state.dart';
+import 'user_storage_service.dart';
+import 'supabase_service.dart';
 
 /// Categories for the "What to search" filter.
 enum SearchCategory {
@@ -96,11 +98,98 @@ class SearchResultItem {
 /// Central service indexing all entities for fast, multi-filtered querying.
 class SearchCatalogService {
   static List<SearchResultItem>? _cachedCatalog;
+  static final List<SearchResultItem> _dynamicRegisteredAthletes = [];
+
+  /// Ingest an athlete dynamically (from Supabase, local registrations, or squad builds)
+  static void registerDynamicAthlete(MatchPlayer player) {
+    final cleanUname = player.username.toLowerCase().replaceAll('@', '');
+    final existingIndex = _dynamicRegisteredAthletes.indexWhere(
+      (it) =>
+          it.id == 'player_${player.id}' ||
+          it.metadata['username']?.toString().toLowerCase().replaceAll('@', '') == cleanUname ||
+          (player.userId.isNotEmpty && it.metadata['userId'] == player.userId),
+    );
+
+    final newItem = SearchResultItem(
+      id: 'player_${player.id}',
+      title: player.name,
+      subtitle: '${player.username.startsWith('@') ? player.username : "@${player.username}"} • ${player.role} • #${player.jerseyNumber}',
+      description: '${player.name} (${player.username}) is a registered athlete on WorldSports. Role: ${player.role}. ${player.specsSummary.isNotEmpty ? "Specs: " + player.specsSummary : ""}',
+      category: SearchCategory.players,
+      sport: SportType.cricket,
+      sports: SportType.values,
+      location: 'India',
+      icon: Icons.verified_user_rounded,
+      accentColor: const Color(0xFF0284C7),
+      metadata: {
+        'username': player.username,
+        'userId': player.userId,
+        'role': player.role,
+        'jersey': player.jerseyNumber,
+        'isVerified': true,
+        'specs': player.specsSummary,
+      },
+      tags: [
+        'player',
+        'athlete',
+        'verified',
+        player.name.toLowerCase(),
+        player.username.toLowerCase(),
+        cleanUname,
+        player.userId.toLowerCase(),
+        player.role.toLowerCase(),
+      ],
+    );
+
+    if (existingIndex >= 0) {
+      _dynamicRegisteredAthletes[existingIndex] = newItem;
+    } else {
+      _dynamicRegisteredAthletes.insert(0, newItem);
+    }
+    _cachedCatalog = null;
+  }
+
+  /// Synchronize all registered and cached athletes into the search catalog
+  static Future<void> syncDynamicAthletesFromStorage() async {
+    try {
+      final registered = await UserStorageService.getAllRegisteredUsers();
+      for (final u in registered) {
+        registerDynamicAthlete(
+          MatchPlayer(
+            id: u.id,
+            userId: u.userId.isNotEmpty ? u.userId : 'WS-${u.username.replaceAll('@', '').toUpperCase()}',
+            username: u.username,
+            name: u.name,
+            jerseyNumber: 10,
+            role: u.primaryRole.toUpperCase(),
+            specsSummary: u.getSpecsSummaryForSport(u.primarySport),
+          ),
+        );
+      }
+    } catch (_) {}
+
+    try {
+      final cachedRemote = await UserStorageService.getCachedRemoteAthletes();
+      for (final p in cachedRemote) {
+        registerDynamicAthlete(p);
+      }
+    } catch (_) {}
+
+    try {
+      final liveAthletes = await SupabaseService.fetchAllAthletes();
+      for (final p in liveAthletes) {
+        registerDynamicAthlete(p);
+      }
+    } catch (_) {}
+  }
 
   /// Returns the master list of all searchable entities.
   static List<SearchResultItem> getAllItems() {
     if (_cachedCatalog != null) return _cachedCatalog!;
     final items = <SearchResultItem>[];
+
+    // ── 0. DYNAMIC REGISTERED ATHLETES (Supabase & Local) ───────────────────
+    items.addAll(_dynamicRegisteredAthletes);
 
     // ── 1. PLAYERS ────────────────────────────────────────────────────────────
     // Cricket Stars from RealAthletesCatalog

@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/models/models.dart';
 import '../../core/services/search_service.dart';
+import '../../core/services/supabase_service.dart';
 import '../../widgets/common_widgets.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -40,6 +41,23 @@ class _SearchScreenState extends State<SearchScreen> {
   void initState() {
     super.initState();
     initStateDatabase();
+    SearchCatalogService.syncDynamicAthletesFromStorage().then((_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  void _performLiveAthleteSearch(String query) async {
+    final clean = query.trim().replaceAll('@', '');
+    if (clean.length < 2) return;
+    try {
+      final remote = await SupabaseService.searchAthletes(clean);
+      if (remote.isNotEmpty && mounted) {
+        for (final p in remote) {
+          SearchCatalogService.registerDynamicAthlete(p);
+        }
+        setState(() {});
+      }
+    } catch (_) {}
   }
 
   @override
@@ -188,7 +206,10 @@ class _SearchScreenState extends State<SearchScreen> {
                     child: TextField(
                       controller: _searchController,
                       autofocus: true,
-                      onChanged: (_) => setState(() {}),
+                      onChanged: (val) {
+                        setState(() {});
+                        _performLiveAthleteSearch(val);
+                      },
                       style: GoogleFonts.outfit(
                         color: const Color(0xFF0F172A),
                         fontSize: 14.5,

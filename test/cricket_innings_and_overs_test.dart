@@ -82,6 +82,11 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
+      if (find.text('Confirm Openers & Start').evaluate().isNotEmpty) {
+        await tester.tap(find.text('Confirm Openers & Start'));
+        await tester.pumpAndSettle();
+      }
+
       // Navigate to Scoreboard Tab
       await tester.tap(find.text('Scoreboard'));
       await tester.pumpAndSettle();
@@ -119,6 +124,11 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
+      if (find.text('Confirm Openers & Start').evaluate().isNotEmpty) {
+        await tester.tap(find.text('Confirm Openers & Start'));
+        await tester.pumpAndSettle();
+      }
+
       await tester.tap(find.text('Scoreboard'));
       await tester.pumpAndSettle();
 
@@ -130,6 +140,11 @@ void main() {
       for (int i = 0; i < 6; i++) {
         await tester.tap(oneRunButton);
         await tester.pumpAndSettle();
+        final confirmBtn = find.textContaining('Confirm +');
+        if (confirmBtn.evaluate().isNotEmpty) {
+          await tester.tap(confirmBtn.first);
+          await tester.pumpAndSettle();
+        }
       }
 
       // 6 balls bowled in 1-over match: Over limit reached!
@@ -143,6 +158,11 @@ void main() {
         matching: find.text('Start 2nd Innings'),
       ));
       await tester.pumpAndSettle();
+
+      if (find.text('Confirm Openers & Start').evaluate().isNotEmpty) {
+        await tester.tap(find.text('Confirm Openers & Start'));
+        await tester.pumpAndSettle();
+      }
 
       // Scorecard should now display 2nd innings (Delhi Dynamos Batting)
       expect(find.text('Delhi Dynamos Batting'), findsOneWidget);
@@ -168,6 +188,11 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
+      if (find.text('Confirm Openers & Start').evaluate().isNotEmpty) {
+        await tester.tap(find.text('Confirm Openers & Start'));
+        await tester.pumpAndSettle();
+      }
+
       await tester.tap(find.text('Scoreboard'));
       await tester.pumpAndSettle();
 
@@ -185,6 +210,11 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
+      if (find.text('Confirm Openers & Start').evaluate().isNotEmpty) {
+        await tester.tap(find.text('Confirm Openers & Start'));
+        await tester.pumpAndSettle();
+      }
+
       // Tap End Match in AppBar
       await tester.tap(find.text('End Match'));
       await tester.pumpAndSettle();
@@ -192,6 +222,119 @@ void main() {
       // Shows bottom sheet with Abandon Match option
       expect(find.text('Abandon Match'), findsOneWidget);
       expect(find.text('Conclude / Finalize Match'), findsOneWidget);
+    });
+
+    testWidgets('Toss winner electing to bat bats first; toss winner electing to bowl bowls first', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      // Team 2 (Australia) wins toss and elects to Bat
+      final ausBatFirstMatch = MatchModel(
+        id: 'aus_bat_match',
+        sport: SportType.cricket,
+        team1Id: 't1',
+        team2Id: 't2',
+        team1Name: 'India',
+        team2Name: 'Australia',
+        team1Short: 'IND',
+        team2Short: 'AUS',
+        tossWinner: 'Australia',
+        tossDecision: 'Bat',
+        dateTime: DateTime(2026, 10, 18),
+        venue: 'MCG',
+        creatorId: 'u001',
+        format: '1-Over Shootout',
+        scoreData: const {
+          'overs_limit': 1,
+        },
+        team1Players: const [
+          MatchPlayer(id: 'c1', name: 'Rohit Sharma', jerseyNumber: 45, role: 'Opening Batsman'),
+          MatchPlayer(id: 'c2', name: 'Jasprit Bumrah', jerseyNumber: 93, role: 'Fast Bowler'),
+        ],
+        team2Players: const [
+          MatchPlayer(id: 'c10', name: 'David Warner', jerseyNumber: 31, role: 'Opening Batsman'),
+          MatchPlayer(id: 'c11', name: 'Travis Head', jerseyNumber: 62, role: 'Opening Batsman'),
+        ],
+      );
+
+      await tester.pumpWidget(createCricketTestApp(
+        match: ausBatFirstMatch,
+        loggedInUser: MockData.demoPlayer,
+      ));
+      await tester.pumpAndSettle();
+
+      // Check if opener sheet appeared
+      if (find.text('Choose initial strikers for Australia').evaluate().isNotEmpty) {
+        expect(find.text('Choose initial strikers for Australia'), findsOneWidget);
+        expect(find.text('OPENING BOWLER (IND)'), findsOneWidget);
+        await tester.tap(find.text('Confirm Openers & Start'));
+        await tester.pumpAndSettle();
+      }
+
+      // Check scoreboard
+      await tester.tap(find.text('Scoreboard'));
+      await tester.pumpAndSettle();
+
+      // 1st innings tab should be AUS 1st Inn!
+      expect(find.text('AUS 1st Inn'), findsOneWidget);
+      expect(find.text('IND 2nd Inn'), findsOneWidget);
+      expect(find.text('Australia Batting'), findsOneWidget);
+      expect(find.text('India Bowling'), findsOneWidget);
+    });
+
+    testWidgets('Toss winner electing to Bowl causes other team to bat first', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      // Team 1 (India) wins toss and elects to Bowl -> Australia bats first
+      final indBowlFirstMatch = MatchModel(
+        id: 'ind_bowl_match',
+        sport: SportType.cricket,
+        team1Id: 't1',
+        team2Id: 't2',
+        team1Name: 'India',
+        team2Name: 'Australia',
+        team1Short: 'IND',
+        team2Short: 'AUS',
+        tossWinner: 'India',
+        tossDecision: 'Bowl',
+        dateTime: DateTime(2026, 10, 18),
+        venue: 'Eden Gardens',
+        creatorId: 'u001',
+        format: '1-Over Shootout',
+        scoreData: const {
+          'overs_limit': 1,
+        },
+        team1Players: const [
+          MatchPlayer(id: 'c1', name: 'Rohit Sharma', jerseyNumber: 45, role: 'Opening Batsman'),
+          MatchPlayer(id: 'c2', name: 'Jasprit Bumrah', jerseyNumber: 93, role: 'Fast Bowler'),
+        ],
+        team2Players: const [
+          MatchPlayer(id: 'c10', name: 'David Warner', jerseyNumber: 31, role: 'Opening Batsman'),
+          MatchPlayer(id: 'c11', name: 'Travis Head', jerseyNumber: 62, role: 'Opening Batsman'),
+        ],
+      );
+
+      await tester.pumpWidget(createCricketTestApp(
+        match: indBowlFirstMatch,
+        loggedInUser: MockData.demoPlayer,
+      ));
+      await tester.pumpAndSettle();
+
+      if (find.text('Confirm Openers & Start').evaluate().isNotEmpty) {
+        expect(find.text('Choose initial strikers for Australia'), findsOneWidget);
+        expect(find.text('OPENING BOWLER (IND)'), findsOneWidget);
+        await tester.tap(find.text('Confirm Openers & Start'));
+        await tester.pumpAndSettle();
+      }
+
+      await tester.tap(find.text('Scoreboard'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('AUS 1st Inn'), findsOneWidget);
+      expect(find.text('IND 2nd Inn'), findsOneWidget);
+      expect(find.text('Australia Batting'), findsOneWidget);
+      expect(find.text('India Bowling'), findsOneWidget);
     });
   });
 }

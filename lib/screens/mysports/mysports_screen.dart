@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -24,6 +25,11 @@ class _MySportsScreenState extends State<MySportsScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<AppState>().syncMatchesFromSupabase().catchError((_) {});
+      }
+    });
   }
 
   @override
@@ -32,18 +38,14 @@ class _MySportsScreenState extends State<MySportsScreen>
     super.dispose();
   }
 
-  List<PreviousMatchModel> get _filteredPreviousMatches {
-    if (_selectedSportFilter == null) return MockData.previousMatches;
-    return MockData.previousMatches
-        .where((m) => m.sport == _selectedSportFilter)
-        .toList();
+  List<PreviousMatchModel> _getFilteredPreviousMatches(List<PreviousMatchModel> matches) {
+    if (_selectedSportFilter == null) return matches;
+    return matches.where((m) => m.sport == _selectedSportFilter).toList();
   }
 
-  List<MatchModel> get _filteredUpcomingMatches {
-    if (_selectedSportFilter == null) return MockData.upcomingMatches;
-    return MockData.upcomingMatches
-        .where((m) => m.sport == _selectedSportFilter)
-        .toList();
+  List<MatchModel> _getFilteredUpcomingMatches(List<MatchModel> upcoming) {
+    if (_selectedSportFilter == null) return upcoming;
+    return upcoming.where((m) => m.sport == _selectedSportFilter).toList();
   }
 
   List<MatchModel> _getFilteredLiveMatches(List<MatchModel> liveMatches) {
@@ -55,8 +57,33 @@ class _MySportsScreenState extends State<MySportsScreen>
 
   @override
   Widget build(BuildContext context) {
-    final liveMatches = context.watch<AppState>().liveMatches;
-    final filteredLive = _getFilteredLiveMatches(liveMatches);
+    final appState = context.watch<AppState>();
+    final user = appState.currentUser;
+
+    // Only show matches where the real user is added as a player or participant
+    final allLive = appState.liveMatches;
+    final userLive = allLive.where((m) => appState.isUserInMatch(m, user)).toList();
+    final filteredLive = _getFilteredLiveMatches(userLive);
+
+    final userPrevious = appState.getUserPreviousMatches(user);
+    final filteredPrevious = _getFilteredPreviousMatches(userPrevious);
+
+    final allUpcoming = appState.upcomingMatches;
+    final userUpcoming = allUpcoming.where((m) => appState.isUserInMatch(m, user)).toList();
+    final filteredUpcoming = _getFilteredUpcomingMatches(userUpcoming);
+
+    int statsPlayed = 0;
+    int statsWins = 0;
+    if (user != null) {
+      for (final s in user.stats.values) {
+        statsPlayed += s.matchesPlayed;
+        statsWins += s.wins;
+      }
+    }
+    final totalPlayed = math.max(statsPlayed, userPrevious.length);
+    final totalWins = math.max(statsWins, userPrevious.where((m) => m.isWin).length);
+    final totalUpcoming = userUpcoming.length;
+
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: SafeArea(
@@ -95,21 +122,21 @@ class _MySportsScreenState extends State<MySportsScreen>
                   children: [
                     _MetricItem(
                       label: 'PLAYED',
-                      value: '${MockData.previousMatches.length}',
+                      value: '$totalPlayed',
                       color: AppColors.primary,
                       icon: Icons.history_rounded,
                     ),
                     Container(width: 1, height: 28, color: AppColors.surfaceLighter),
                     _MetricItem(
                       label: 'WINS',
-                      value: '${MockData.previousMatches.where((m) => m.isWin).length}',
+                      value: '$totalWins',
                       color: AppColors.cricket,
                       icon: Icons.emoji_events_outlined,
                     ),
                     Container(width: 1, height: 28, color: AppColors.surfaceLighter),
                     _MetricItem(
                       label: 'UPCOMING',
-                      value: '${MockData.upcomingMatches.length}',
+                      value: '$totalUpcoming',
                       color: AppColors.secondary,
                       icon: Icons.event_available_rounded,
                     ),
@@ -232,10 +259,10 @@ class _MySportsScreenState extends State<MySportsScreen>
                 ),
                 tabs: [
                   Tab(
-                    text: 'UPCOMING (${_filteredUpcomingMatches.length})',
+                    text: 'UPCOMING (${filteredUpcoming.length})',
                   ),
                   Tab(
-                    text: 'PREVIOUS (${_filteredPreviousMatches.length})',
+                    text: 'PREVIOUS (${filteredPrevious.length})',
                   ),
                   Tab(
                     text: 'LIVE (${filteredLive.length})',
@@ -248,27 +275,33 @@ class _MySportsScreenState extends State<MySportsScreen>
 
             // Tab Views: Upcoming, Previous, Live
             Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  // Tab 1: Upcoming Matches
-                  _UpcomingMatchesView(
-                    matches: _filteredUpcomingMatches,
-                    onClearFilter: () => setState(() => _selectedSportFilter = null),
-                  ),
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  await context.read<AppState>().syncMatchesFromSupabase().catchError((_) {});
+                },
+                color: AppColors.primary,
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    // Tab 1: Upcoming Matches
+                    _UpcomingMatchesView(
+                      matches: filteredUpcoming,
+                      onClearFilter: () => setState(() => _selectedSportFilter = null),
+                    ),
 
-                  // Tab 2: Previous Matches
-                  _PreviousMatchesView(
-                    matches: _filteredPreviousMatches,
-                    onClearFilter: () => setState(() => _selectedSportFilter = null),
-                  ),
+                    // Tab 2: Previous Matches
+                    _PreviousMatchesView(
+                      matches: filteredPrevious,
+                      onClearFilter: () => setState(() => _selectedSportFilter = null),
+                    ),
 
-                  // Tab 3: Live Arena
-                  _LiveMatchesView(
-                    matches: filteredLive,
-                    onClearFilter: () => setState(() => _selectedSportFilter = null),
-                  ),
-                ],
+                    // Tab 3: Live Arena
+                    _LiveMatchesView(
+                      matches: filteredLive,
+                      onClearFilter: () => setState(() => _selectedSportFilter = null),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -698,15 +731,45 @@ class _PreviousMatchCard extends StatelessWidget {
 
     return BouncingTap(
       onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: Colors.white,
-            content: Text(
-              'Official Scorecard: ${match.team1Name} vs ${match.team2Name}',
-              style: GoogleFonts.outfit(color: AppColors.textPrimary),
+        final appState = context.read<AppState>();
+        MatchModel? matchModel;
+        try {
+          matchModel = appState.allMatches.firstWhere((m) => m.id == match.id);
+        } catch (_) {}
+
+        if (matchModel != null) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => LiveScoringScreen(match: matchModel!),
             ),
-          ),
-        );
+          );
+        } else {
+          final tempMatch = MatchModel(
+            id: match.id,
+            sport: match.sport,
+            team1Id: 't1',
+            team2Id: 't2',
+            team1Name: match.team1Name,
+            team2Name: match.team2Name,
+            team1Short: match.team1Short,
+            team2Short: match.team2Short,
+            dateTime: match.date,
+            venue: match.venue,
+            status: MatchStatus.completed,
+            resultText: match.resultText,
+            scoreData: match.rawScoreData ?? {
+              'team1_score': match.team1Score,
+              'team2_score': match.team2Score,
+              'status_text': match.resultText,
+              'mvp_player': match.mvpPlayer,
+            },
+          );
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => LiveScoringScreen(match: tempMatch),
+            ),
+          );
+        }
       },
       child: Container(
         decoration: BoxDecoration(
@@ -733,34 +796,42 @@ class _PreviousMatchCard extends StatelessWidget {
                 children: [
                   SportBadge(sport: match.sport, showLabel: true, size: 20),
                   const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: winColor,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          match.isWin ? Icons.emoji_events_rounded : Icons.flag_rounded,
-                          color: Colors.white,
-                          size: 12,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          match.resultText.toUpperCase(),
-                          style: GoogleFonts.outfit(
+                  Flexible(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: winColor,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            match.isWin ? Icons.emoji_events_rounded : Icons.flag_rounded,
                             color: Colors.white,
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0.4,
+                            size: 12,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              match.resultText.toUpperCase(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.outfit(
+                                color: Colors.white,
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.4,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
               ),
+
             ),
 
             // Match Scoreboard

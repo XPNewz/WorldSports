@@ -167,6 +167,12 @@ void main() {
       await tester.tap(fourButton);
       await tester.pumpAndSettle();
 
+      final confirmBtn = find.textContaining('Confirm +');
+      if (confirmBtn.evaluate().isNotEmpty) {
+        await tester.tap(confirmBtn.first);
+        await tester.pumpAndSettle();
+      }
+
       // Switch to Timeline tab to verify event was recorded
       await tester.tap(find.text('Timeline'));
       await tester.pumpAndSettle();

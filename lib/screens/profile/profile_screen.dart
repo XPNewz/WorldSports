@@ -7,6 +7,7 @@ import '../../core/state/app_state.dart';
 import '../../widgets/common_widgets.dart';
 import '../../core/services/supabase_service.dart';
 import '../auth/auth_screen.dart';
+import 'dedicated_stats_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -18,16 +19,204 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   SportType? _selectedSkillSport; // null = all sports skills
 
-  List<SportSkillModel> get _filteredSkills {
-    if (_selectedSkillSport == null) return MockData.athleteSkills;
-    return MockData.athleteSkills
-        .where((s) => s.sport == _selectedSkillSport)
-        .toList();
+  List<SportSkillModel> _getFilteredSkills(UserModel user) {
+    final List<SportSkillModel> all = [];
+    final sports = user.sports.isNotEmpty ? user.sports : [user.primarySport];
+
+    for (final sp in sports) {
+      final playerStat = user.stats[sp];
+      final played = playerStat?.matchesPlayed ?? 0;
+
+      // Base skill definitions per sport - all start at score 0 / Rookie tier for new athletes
+      switch (sp) {
+        case SportType.cricket:
+          all.addAll([
+            SportSkillModel(
+              sport: SportType.cricket,
+              skillName: 'Power Hitting',
+              score: played == 0 ? 0 : (playerStat?.rating ?? 0).toInt() * 15,
+              tier: played == 0 ? 'Rookie' : 'Pro',
+              category: 'Power',
+            ),
+            SportSkillModel(
+              sport: SportType.cricket,
+              skillName: 'Bowling Pace & Line',
+              score: 0,
+              tier: 'Rookie',
+              category: 'Technique',
+            ),
+            SportSkillModel(
+              sport: SportType.cricket,
+              skillName: 'Reflex Catching',
+              score: 0,
+              tier: 'Rookie',
+              category: 'Fielding',
+            ),
+            SportSkillModel(
+              sport: SportType.cricket,
+              skillName: 'Tactical Match Reading',
+              score: 0,
+              tier: 'Rookie',
+              category: 'Tactics',
+            ),
+          ]);
+          break;
+        case SportType.football:
+          all.addAll([
+            SportSkillModel(
+              sport: SportType.football,
+              skillName: 'Sprint Speed',
+              score: 0,
+              tier: 'Rookie',
+              category: 'Pace',
+            ),
+            SportSkillModel(
+              sport: SportType.football,
+              skillName: 'Ball Control & Dribbling',
+              score: 0,
+              tier: 'Rookie',
+              category: 'Technique',
+            ),
+            SportSkillModel(
+              sport: SportType.football,
+              skillName: 'Vision & Key Passes',
+              score: 0,
+              tier: 'Rookie',
+              category: 'Playmaking',
+            ),
+            SportSkillModel(
+              sport: SportType.football,
+              skillName: 'Clinical Finishing',
+              score: 0,
+              tier: 'Rookie',
+              category: 'Power',
+            ),
+          ]);
+          break;
+        case SportType.basketball:
+          all.addAll([
+            SportSkillModel(
+              sport: SportType.basketball,
+              skillName: 'Perimeter Shooting',
+              score: 0,
+              tier: 'Rookie',
+              category: 'Technique',
+            ),
+            SportSkillModel(
+              sport: SportType.basketball,
+              skillName: 'Court Vision & Assists',
+              score: 0,
+              tier: 'Rookie',
+              category: 'Tactics',
+            ),
+            SportSkillModel(
+              sport: SportType.basketball,
+              skillName: 'Fast Break Transition',
+              score: 0,
+              tier: 'Rookie',
+              category: 'Pace',
+            ),
+          ]);
+          break;
+        case SportType.tennis:
+          all.addAll([
+            SportSkillModel(
+              sport: SportType.tennis,
+              skillName: 'First Serve Velocity',
+              score: 0,
+              tier: 'Rookie',
+              category: 'Power',
+            ),
+            SportSkillModel(
+              sport: SportType.tennis,
+              skillName: 'Baseline Forehand Topspin',
+              score: 0,
+              tier: 'Rookie',
+              category: 'Technique',
+            ),
+            SportSkillModel(
+              sport: SportType.tennis,
+              skillName: 'Lateral Court Agility',
+              score: 0,
+              tier: 'Rookie',
+              category: 'Pace',
+            ),
+          ]);
+          break;
+      }
+    }
+
+    if (_selectedSkillSport == null) return all;
+    return all.where((s) => s.sport == _selectedSkillSport).toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<AppState>().currentUser ?? MockData.demoPlayer;
+    final user = context.watch<AppState>().currentUser;
+
+    if (user == null) {
+      return Scaffold(
+        backgroundColor: AppColors.bg,
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 28),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const AppLogo(size: 64, showContainer: true, showShadow: true),
+                  const SizedBox(height: 20),
+                  Text(
+                    'ATHLETE PASSPORT',
+                    style: GoogleFonts.outfit(
+                      color: AppColors.primary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'No Athlete Signed In',
+                    style: GoogleFonts.outfit(
+                      color: AppColors.textPrimary,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Log in with your athlete credentials or create an account to load your official profile and stats from the database.',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.outfit(
+                      color: AppColors.textSecondary,
+                      fontSize: 13.5,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  GradientButton(
+                    label: 'SIGN IN / REGISTER',
+                    icon: Icons.login_rounded,
+                    width: double.infinity,
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    int totalMatches = 0;
+    for (final s in user.stats.values) {
+      totalMatches += s.matchesPlayed;
+    }
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -106,18 +295,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                              color: AppColors.gold.withValues(alpha: 0.12),
+                              color: totalMatches > 0
+                                  ? AppColors.gold.withValues(alpha: 0.12)
+                                  : const Color(0xFF64748B).withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: AppColors.gold.withValues(alpha: 0.4)),
+                              border: Border.all(
+                                color: totalMatches > 0
+                                    ? AppColors.gold.withValues(alpha: 0.4)
+                                    : const Color(0xFF64748B).withValues(alpha: 0.3),
+                              ),
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.star_rounded, color: AppColors.gold, size: 12),
+                                Icon(
+                                  totalMatches > 0
+                                      ? Icons.star_rounded
+                                      : Icons.shield_outlined,
+                                  color: totalMatches > 0
+                                      ? AppColors.gold
+                                      : const Color(0xFF64748B),
+                                  size: 12,
+                                ),
                                 const SizedBox(width: 3),
                                 Text(
-                                  '88 OVR • ELITE',
+                                  totalMatches > 0 ? '88 OVR • ELITE' : '0 OVR • ROOKIE',
                                   style: GoogleFonts.outfit(
-                                    color: AppColors.gold,
+                                    color: totalMatches > 0
+                                        ? AppColors.gold
+                                        : const Color(0xFF475569),
                                     fontSize: 10,
                                     fontWeight: FontWeight.w900,
                                   ),
@@ -317,7 +522,7 @@ boxShadow: const [AppColors.cellShadowSmall],
                         Container(width: 1, height: 32, color: AppColors.surfaceLighter),
                         _FollowStat(_formatNum(user.following), 'FOLLOWING', AppColors.secondary),
                         Container(width: 1, height: 32, color: AppColors.surfaceLighter),
-                        _FollowStat('${MockData.previousMatches.length + 42}', 'MATCHES', AppColors.gold),
+                        _FollowStat('$totalMatches', 'MATCHES', AppColors.gold),
                         Container(width: 1, height: 32, color: AppColors.surfaceLighter),
                         _FollowStat('${user.sports.length}', 'SPORTS', AppColors.accent),
                       ],
@@ -348,30 +553,94 @@ boxShadow: const [AppColors.cellShadowSmall],
                 title: 'Played Sports & Performance',
                 accentColor: AppColors.primary,
                 icon: Icons.sports_score_rounded,
+                actionLabel: 'All Sports Arena',
+                onAction: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const DedicatedStatsScreen(),
+                    ),
+                  );
+                },
               ),
             ),
           ),
 
-          // Basic Stats Cards for all Played Sports
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            sliver: SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final entry = user.stats.entries.toList()[index];
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 14),
-                    child: _SportProfileCard(
-                      sport: entry.key,
-                      stats: entry.value,
-                      onOpenMore: () => _showDedicatedSportWindow(context, entry.key, entry.value),
-                    ),
-                  );
-                },
-                childCount: user.stats.length,
+          // Basic Stats Cards for all Played Sports or Fresh Passport Notice
+          if (user.stats.isEmpty || totalMatches == 0)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                        color: AppColors.cellBorderColor,
+                        width: AppColors.cellBorderWidth),
+                    boxShadow: const [AppColors.cellShadowSmall],
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.sports_score_rounded,
+                          color: AppColors.primary,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        '0 Matches Played • Fresh Passport',
+                        style: GoogleFonts.outfit(
+                          color: AppColors.textPrimary,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'You have not played any matches yet. Career scores, batting/bowling averages, and win rates will appear here once you compete in your first game.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.outfit(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            )
+          else
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final entry = user.stats.entries.toList()[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 14),
+                      child: _SportProfileCard(
+                        sport: entry.key,
+                        stats: entry.value,
+                        onOpenMore: () => _showDedicatedSportWindow(context, entry.key, entry.value),
+                      ),
+                    );
+                  },
+                  childCount: user.stats.length,
+                ),
               ),
             ),
-          ),
 
           // ─── 3. Your Skills Across All Sports ──────────────────────────────
           SliverToBoxAdapter(
@@ -443,20 +712,25 @@ boxShadow: const [AppColors.cellShadowSmall],
           ),
 
           // Skill Progress Cards Grid / List
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-            sliver: SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final skill = _filteredSkills[index];
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: _SkillProgressCard(skill: skill),
-                  );
-                },
-                childCount: _filteredSkills.length,
-              ),
-            ),
+          Builder(
+            builder: (context) {
+              final userSkills = _getFilteredSkills(user);
+              return SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final skill = userSkills[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: _SkillProgressCard(skill: skill),
+                      );
+                    },
+                    childCount: userSkills.length,
+                  ),
+                ),
+              );
+            },
           ),
 
           // ─── 4. Achievements and Awards Showcase ───────────────────────────
@@ -471,19 +745,57 @@ boxShadow: const [AppColors.cellShadowSmall],
             ),
           ),
 
-          // Certified Honors Cards
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            sliver: SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final ach = MockData.achievements[index];
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _AchievementHonorCard(achievement: ach),
-                  );
-                },
-                childCount: MockData.achievements.length,
+          // Certified Honors Cards or Empty State
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                      color: AppColors.cellBorderColor,
+                      width: AppColors.cellBorderWidth),
+                  boxShadow: const [AppColors.cellShadowSmall],
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: AppColors.gold.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.workspace_premium_outlined,
+                        color: AppColors.gold,
+                        size: 26,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'No Achievements Earned Yet',
+                      style: GoogleFonts.outfit(
+                        color: AppColors.textPrimary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '0 Certified Honors • Play sanctioned matches to unlock trophies and badges in your passport.',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.outfit(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -623,11 +935,13 @@ boxShadow: const [AppColors.cellShadowSmall],
   }
 
   void _showDedicatedSportWindow(BuildContext context, SportType sport, PlayerStats stats) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (ctx) => _DedicatedSportWindowSheet(sport: sport, stats: stats),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DedicatedStatsScreen(
+          initialSport: sport,
+        ),
+      ),
     );
   }
 
@@ -1588,7 +1902,7 @@ class _SportProfileCard extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          'More Details',
+                          'Detailed Stats',
                           style: GoogleFonts.outfit(
                             color: sportColor,
                             fontSize: 11.5,
@@ -1619,38 +1933,43 @@ List<Map<String, dynamic>> _resolvePrimaryHighlights(SportType sport, PlayerStat
       {'label': 'MATCHES', 'value': '${stats.matchesPlayed}', 'color': AppColors.textPrimary},
       {'label': 'WINS', 'value': '${stats.wins}', 'color': AppColors.tennis},
       {'label': 'WIN RATE', 'value': '${(stats.winRate * 100).toStringAsFixed(0)}%', 'color': AppColors.tennis},
-      {'label': 'ACES', 'value': '${s['aces'] ?? 142}', 'color': AppColors.secondary},
+      {'label': 'ACES', 'value': '${s['aces'] ?? 0}', 'color': AppColors.secondary},
     ];
   }
 
   switch (sport) {
     case SportType.cricket:
+      final runs = s['runs'] ?? s['total_runs'] ?? 0;
+      final avg = s['batting_avg'] ?? (runs > 0 ? runs.toString() : '0.0');
+      final sr = s['strike_rate'] ?? '0.0';
+      final hundreds = s['hundreds'] ?? 0;
+      final fifties = s['fifties'] ?? 0;
       return [
-        {'label': 'CAREER RUNS', 'value': '${s['runs'] ?? '1,842'}', 'color': AppColors.cricket},
-        {'label': 'BATTING AVG', 'value': '${s['batting_avg'] ?? '41.2'}', 'color': AppColors.cricket},
-        {'label': 'STRIKE RATE', 'value': '${s['strike_rate'] ?? '138.4'}', 'color': AppColors.primary},
-        {'label': '100s / 50s', 'value': '${s['hundreds'] ?? 3}/${s['fifties'] ?? 12}', 'color': AppColors.gold},
+        {'label': 'CAREER RUNS', 'value': '$runs', 'color': AppColors.cricket},
+        {'label': 'BATTING AVG', 'value': '$avg', 'color': AppColors.cricket},
+        {'label': 'STRIKE RATE', 'value': '$sr', 'color': AppColors.primary},
+        {'label': '100s / 50s', 'value': '$hundreds/$fifties', 'color': AppColors.gold},
       ];
     case SportType.football:
       return [
-        {'label': 'ASSISTS', 'value': '${s['assists'] ?? 24}', 'color': AppColors.secondary},
-        {'label': 'GOALS', 'value': '${s['goals'] ?? 18}', 'color': AppColors.football},
-        {'label': 'PASS ACC', 'value': '${s['pass_accuracy'] ?? '87.4%'}', 'color': AppColors.primary},
+        {'label': 'GOALS', 'value': '${s['goals'] ?? 0}', 'color': AppColors.football},
+        {'label': 'ASSISTS', 'value': '${s['assists'] ?? 0}', 'color': AppColors.secondary},
+        {'label': 'PASS ACC', 'value': '${s['pass_accuracy'] ?? '0.0%'}', 'color': AppColors.primary},
         {'label': 'MATCHES', 'value': '${stats.matchesPlayed}', 'color': AppColors.textPrimary},
       ];
     case SportType.basketball:
       return [
-        {'label': 'ASSISTS', 'value': '${s['assists'] ?? 63}', 'color': AppColors.primary},
-        {'label': 'POINTS', 'value': '${s['points'] ?? 312}', 'color': AppColors.basketball},
-        {'label': 'REBOUNDS', 'value': '${s['rebounds'] ?? 87}', 'color': AppColors.secondary},
-        {'label': 'STEALS', 'value': '${s['steals'] ?? 28}', 'color': AppColors.accent},
+        {'label': 'POINTS', 'value': '${s['points'] ?? 0}', 'color': AppColors.basketball},
+        {'label': 'ASSISTS', 'value': '${s['assists'] ?? 0}', 'color': AppColors.primary},
+        {'label': 'REBOUNDS', 'value': '${s['rebounds'] ?? 0}', 'color': AppColors.secondary},
+        {'label': 'STEALS', 'value': '${s['steals'] ?? 0}', 'color': AppColors.accent},
       ];
     case SportType.tennis:
       return [
         {'label': 'MATCHES', 'value': '${stats.matchesPlayed}', 'color': AppColors.textPrimary},
         {'label': 'WINS', 'value': '${stats.wins}', 'color': AppColors.tennis},
         {'label': 'WIN RATE', 'value': '${(stats.winRate * 100).toStringAsFixed(0)}%', 'color': AppColors.tennis},
-        {'label': 'ACES', 'value': '${s['aces'] ?? 142}', 'color': AppColors.secondary},
+        {'label': 'ACES', 'value': '${s['aces'] ?? 0}', 'color': AppColors.secondary},
       ];
   }
 }

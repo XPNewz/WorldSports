@@ -980,13 +980,13 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
 
   // Controllers for Login
-  final _loginIdentifierController =
-      TextEditingController(text: 'arjun@worldsports.com');
-  final _passController = TextEditingController(text: 'password');
+  final _loginIdentifierController = TextEditingController();
+  final _passController = TextEditingController();
 
   bool _obscurePassword = true;
   bool _rememberMe = true;
   bool _isLoading = false;
+  bool _isNavigating = false;
   String? _errorMessage;
   StreamSubscription<AuthState>? _authSubscription;
 
@@ -1000,7 +1000,8 @@ class _LoginScreenState extends State<LoginScreen> {
             client.auth.onAuthStateChange.listen((data) async {
           final AuthChangeEvent event = data.event;
           final Session? session = data.session;
-          if (event == AuthChangeEvent.signedIn && session != null && mounted) {
+          if (event == AuthChangeEvent.signedIn && session != null && mounted && !_isNavigating) {
+            _isNavigating = true;
             final user = session.user;
             final profile = await SupabaseService.fetchPlayerProfile(user.id);
             final loggedInUser = UserModel(
@@ -1043,22 +1044,6 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       debugPrint('Supabase auth state listener not attached: $e');
     }
-
-    // Check if redirected back with OAuth error parameters on Web
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      try {
-        final uri = Uri.base;
-        final errorDesc = uri.queryParameters['error_description'] ??
-            uri.queryParameters['error'];
-        if (errorDesc != null && errorDesc.isNotEmpty) {
-          setState(() {
-            _errorMessage =
-                'OAuth Error: $errorDesc\n(Check Google Cloud Console Authorized Redirect URI & Supabase Google Provider Secret)';
-          });
-        }
-      } catch (_) {}
-    });
   }
 
   @override
@@ -1076,27 +1061,6 @@ class _LoginScreenState extends State<LoginScreen> {
   void _selectRole(UserRole role) {
     setState(() {
       _selectedRole = role;
-      if (!_isSignUp) {
-        // Pre-fill corresponding demo credentials for easy test drive
-        switch (role) {
-          case UserRole.player:
-            _loginIdentifierController.text = 'arjun@worldsports.com';
-            _passController.text = 'password';
-            break;
-          case UserRole.coach:
-            _loginIdentifierController.text = 'priya@worldsports.com';
-            _passController.text = 'password';
-            break;
-          case UserRole.organiser:
-            _loginIdentifierController.text = 'vikram@worldsports.com';
-            _passController.text = 'password';
-            break;
-          case UserRole.umpire:
-            _loginIdentifierController.text = 'anil@worldsports.com';
-            _passController.text = 'password';
-            break;
-        }
-      }
     });
   }
 
@@ -1157,19 +1121,39 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       UserModel? loggedInUser;
+      String? specificAuthError;
 
-      // 1. If identifier is an email address, try Supabase authentication
-      if (identifier.contains('@')) {
+      // 1. FAST PATH: Check locally saved registered accounts or demo accounts first.
+      // This guarantees instant (<10ms) login for demo accounts and local offline accounts
+      // without waiting 15+ seconds for online network timeouts.
+      loggedInUser = await UserStorageService.authenticateLocal(
+        emailOrUsername: identifier,
+        password: password,
+      );
+
+      // 2. If not matched locally and identifier is an email (or online account), authenticate via Supabase
+      if (loggedInUser == null) {
         try {
-          final res = await SupabaseService.signIn(email: identifier, password: password);
+          final res = await SupabaseService.signIn(
+            email: identifier,
+            password: password,
+          ).timeout(const Duration(seconds: 6));
+
           final user = res?.user;
           if (user != null) {
             final profile = await SupabaseService.fetchPlayerProfile(user.id);
             loggedInUser = UserModel(
               id: user.id,
-              userId: profile?['user_id'] ?? 'WS-${1000 + (DateTime.now().millisecondsSinceEpoch % 9000)}',
-              name: profile?['full_name'] ?? user.email?.split('@').first ?? 'Athlete',
-              username: profile?['username'] ?? user.email?.split('@').first ?? 'athlete',
+              userId: profile?['user_id'] ??
+                  'WS-${1000 + (DateTime.now().millisecondsSinceEpoch % 9000)}',
+              name: profile?['full_name'] ??
+                  user.userMetadata?['full_name'] ??
+                  user.email?.split('@').first ??
+                  'Athlete',
+              username: profile?['username'] ??
+                  user.userMetadata?['username'] ??
+                  user.email?.split('@').first ??
+                  'athlete',
               email: user.email ?? identifier,
               phone: profile?['phone'] ?? '',
               role: _selectedRole,
@@ -1178,21 +1162,45 @@ class _LoginScreenState extends State<LoginScreen> {
               primaryRole: profile?['primary_role'] ?? 'Athlete',
               hasCompletedProfile: profile?['is_verified'] ?? false,
             );
+
+            // Cache credentials locally so subsequent logins on this device are instant
+            await UserStorageService.registerAccount(
+              email: loggedInUser.email,
+              username: loggedInUser.username,
+              password: password,
+              user: loggedInUser,
+            );
           }
+        } on AuthException catch (ae) {
+          debugPrint('Supabase AuthException: ${ae.message} (${ae.statusCode})');
+          final msg = ae.message.toLowerCase();
+          if (msg.contains('email not confirmed')) {
+            specificAuthError =
+                'Email not confirmed. Please check your inbox for the confirmation email from Supabase, or turn off "Confirm email" in Supabase Auth Settings.';
+          } else if (msg.contains('invalid login credentials')) {
+            specificAuthError =
+                'Invalid email or password. Check your details or register a new account.';
+          } else if (msg.contains('rate limit')) {
+            specificAuthError =
+                'Email rate limit reached on auth server. Please wait a moment or sign in with your username.';
+          } else {
+            specificAuthError = ae.message;
+          }
+        } on TimeoutException {
+          debugPrint('Supabase sign-in timed out after 6 seconds');
+          specificAuthError =
+              'Authentication server connection timed out. Check your internet connection.';
         } catch (e) {
           debugPrint('Supabase sign in note: $e');
+          specificAuthError = e.toString();
         }
       }
 
-      // 2. If Supabase did not authenticate or identifier is a username, check locally stored accounts
-      loggedInUser ??= await UserStorageService.authenticateLocal(
-        emailOrUsername: identifier,
-        password: password,
-      );
-
-      // 3. Check result
+      // 3. Check authentication result
       if (loggedInUser != null) {
-        // Successfully authenticated!
+        if (_isNavigating) return;
+        _isNavigating = true;
+
         await UserStorageService.saveCurrentUser(loggedInUser);
         if (!mounted) return;
         appState.login(loggedInUser);
@@ -1212,12 +1220,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
       // 4. No matching account found
       if (mounted) {
+        final errText = specificAuthError ??
+            'Incorrect email/username or password. If you do not have an account yet, tap "Create Account / Sign In" to register.';
         setState(() {
-          _errorMessage =
-              'Incorrect email/username or password. If you do not have an account yet, tap "Create Account / Sign In" to register.';
+          _errorMessage = errText;
         });
-        _showToast('Invalid credentials. Check your details or create an account.',
-            isError: true);
+        _showToast(errText, isError: true);
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -1264,7 +1272,8 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       if (exists) {
         if (mounted) {
-          _showToast('An account with this email or username already exists. Please log in.',
+          _showToast(
+              'An account with this email or username already exists. Please log in.',
               isError: true);
           setState(() {
             _isSignUp = false;
@@ -1277,7 +1286,7 @@ class _LoginScreenState extends State<LoginScreen> {
       String userId = 'WS-${1000 + (DateTime.now().millisecondsSinceEpoch % 9000)}';
       String authId = 'u_${DateTime.now().millisecondsSinceEpoch}';
 
-      // 1. Attempt Supabase sign up
+      // 1. Attempt Supabase sign up with a 6-second timeout
       try {
         final res = await SupabaseService.signUp(
           email: email,
@@ -1287,12 +1296,12 @@ class _LoginScreenState extends State<LoginScreen> {
           phone: phone,
           primarySport: _selectedSport.name,
           primaryRole: _getRoleTitle(_selectedRole),
-        );
+        ).timeout(const Duration(seconds: 6));
         if (res?.user != null) {
           authId = res!.user!.id;
         }
       } catch (e) {
-        debugPrint('Supabase sign up warning: $e');
+        debugPrint('Supabase sign up notice (creating local athlete passport): $e');
       }
 
       // 2. Build full UserModel
@@ -1319,7 +1328,9 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       await UserStorageService.saveCurrentUser(newUser);
 
-      if (!mounted) return;
+      if (_isNavigating || !mounted) return;
+      _isNavigating = true;
+
       appState.login(newUser);
 
       _showToast('Welcome to WorldSports, $name! Your athlete passport is active.');
@@ -1332,19 +1343,6 @@ class _LoginScreenState extends State<LoginScreen> {
               FadeTransition(opacity: anim, child: child),
         ),
       );
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  void _signInWithGoogle() async {
-    setState(() => _isLoading = true);
-    try {
-      await SupabaseService.signInWithGoogle();
-    } catch (e) {
-      if (mounted) {
-        _showToast('Google Sign-In: $e', isError: true);
-      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -1725,6 +1723,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               ),
                             ),
+                            GestureDetector(
+                              onTap: () => setState(() => _errorMessage = null),
+                              child: const Padding(
+                                padding: EdgeInsets.only(left: 6),
+                                child: Icon(Icons.close_rounded,
+                                    color: Color(0xFF991B1B), size: 18),
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -2049,41 +2055,40 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
 
-              const SizedBox(height: 22),
+              const SizedBox(height: 16),
 
-              // Social Sign-in Divider
-              Row(
-                children: [
-                  const Expanded(
-                    child: Divider(color: Color(0xFFE2E8F0), height: 1),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    child: Text(
-                      'or fast connect with',
-                      style: GoogleFonts.outfit(
-                        color: AppColors.textMuted,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
+              // Direct Athlete Authentication Security Badge
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.verified_user_rounded,
+                      size: 16,
+                      color: AppColors.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Direct Athlete Authentication • Instant Local & Cloud Sync',
+                        style: GoogleFonts.outfit(
+                          color: AppColors.textSecondary,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
-                  ),
-                  const Expanded(
-                    child: Divider(color: Color(0xFFE2E8F0), height: 1),
-                  ),
-                ],
+                  ],
+                ),
               ),
 
-              const SizedBox(height: 14),
-
-              // Google Athlete Sign-In
-              _SocialButton(
-                label: 'Continue with Google',
-                icon: Icons.g_mobiledata_rounded,
-                onTap: _signInWithGoogle,
-              ),
-
-              const SizedBox(height: 22),
+              const SizedBox(height: 18),
 
               // Switcher between Log In and Create Account / Sign In
               Center(
@@ -2204,54 +2209,5 @@ class _LoginScreenState extends State<LoginScreen> {
       case UserRole.umpire:
         return 'Umpire / Referee';
     }
-  }
-}
-
-class _SocialButton extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _SocialButton({
-    required this.label,
-    required this.icon,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return BouncingTap(
-      onTap: onTap,
-      child: Container(
-        height: 48,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.02),
-              blurRadius: 4,
-              offset: const Offset(0, 1),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: AppColors.textPrimary, size: 22),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: GoogleFonts.outfit(
-                color: AppColors.textPrimary,
-                fontSize: 12.5,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

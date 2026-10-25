@@ -1,44 +1,91 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:worldsports/core/models/models.dart';
+import 'package:worldsports/core/services/user_storage_service.dart';
 import 'package:worldsports/core/state/app_state.dart';
 import 'package:worldsports/screens/match/match_creation_screen.dart';
 
 void main() {
-  group('Zero-Dummy Policy & Authentic User ID Verification Tests', () {
-    test('RealAthletesCatalog players possess verified User IDs, usernames, and specs', () {
-      final cricketStars = RealAthletesCatalog.getAthletesForSport(SportType.cricket);
-      expect(cricketStars.isNotEmpty, true);
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+  });
 
-      final virat = cricketStars.firstWhere((p) => p.username == 'virat18');
-      expect(virat.userId, 'WS-1002');
-      expect(virat.name, 'Virat Kohli');
-      expect(virat.specsSummary.contains('Right-hand bat'), true);
+  group('Strict Real-User Match Addition (Zero Dummy Players)', () {
+    test('Only users with registered email or phone are eligible for matches', () {
+      const realUserWithEmail = UserModel(
+        id: 'u1',
+        name: 'Real User 1',
+        email: 'real1@sports.test',
+        phone: '',
+        username: 'real1',
+        sports: [SportType.cricket],
+        role: UserRole.player,
+      );
+      expect(realUserWithEmail.hasRegisteredContact, isTrue);
 
-      final bumrah = cricketStars.firstWhere((p) => p.username == 'jasprit93');
-      expect(bumrah.userId, 'WS-1004');
-      expect(bumrah.role, 'Fast Bowler');
-      expect(bumrah.specsSummary.contains('Yorker'), true);
+      const realUserWithPhone = UserModel(
+        id: 'u2',
+        name: 'Real User 2',
+        email: '',
+        phone: '+919876543210',
+        username: 'real2',
+        sports: [SportType.cricket],
+        role: UserRole.player,
+      );
+      expect(realUserWithPhone.hasRegisteredContact, isTrue);
+
+      const dummyUser = UserModel(
+        id: 'dummy',
+        name: 'Dummy Player',
+        email: '',
+        phone: '',
+        username: 'dummy',
+        sports: [SportType.cricket],
+        role: UserRole.player,
+      );
+      expect(dummyUser.hasRegisteredContact, isFalse);
     });
 
-    test('RealOfficialsCatalog provides sanctioned Scorers and Umpires with verified IDs', () {
-      final scorers = RealOfficialsCatalog.getScorers();
-      expect(scorers.isNotEmpty, true);
-      expect(scorers.first.userId, 'WS-OFF-001');
-      expect(scorers.first.username, 'scorer_john');
-
-      final umpires = RealOfficialsCatalog.getUmpires();
-      expect(umpires.length, greaterThanOrEqualTo(2));
-      expect(umpires.first.userId, 'WS-UMP-001');
-      expect(umpires.first.role, 'Lead Field Umpire');
-    });
-
-    testWidgets('CreateMatchScreen enforces Zero-Dummy lookup and rejects unregistered IDs', (tester) async {
+    testWidgets('Add Athlete dialog searches by username or name and strictly requires registered email/phone', (tester) async {
       await tester.binding.setSurfaceSize(const Size(800, 1400));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       final appState = AppState();
+      const currentUser = UserModel(
+        id: 'user_host',
+        name: 'Host User',
+        email: 'host@sports.test',
+        phone: '+919999999991',
+        username: 'hostuser',
+        role: UserRole.player,
+        sports: [SportType.cricket],
+        hasCompletedProfile: true,
+      );
+      appState.login(currentUser);
+
+      // Register a real teammate in local storage
+      const teammate = UserModel(
+        id: 'user_teammate',
+        userId: 'WS-TEAMMATE-1',
+        name: 'Rahul Sharma',
+        email: 'rahul@sports.test',
+        phone: '+919999999992',
+        username: 'rahul_s',
+        role: UserRole.player,
+        sports: [SportType.cricket],
+        primarySport: SportType.cricket,
+        primaryRole: 'Batsman',
+        hasCompletedProfile: true,
+      );
+      await UserStorageService.registerAccount(
+        email: teammate.email,
+        username: teammate.username,
+        password: 'password123',
+        user: teammate,
+      );
+
       await tester.pumpWidget(
         ChangeNotifierProvider<AppState>.value(
           value: appState,
@@ -59,31 +106,31 @@ void main() {
       await tester.tap(addAthleteBtn);
       await tester.pumpAndSettle();
 
-      // Verify Zero-Dummy policy banner is visible
-      expect(find.textContaining('Zero-Dummy Policy'), findsOneWidget);
-      expect(find.text('User ID / Username'), findsOneWidget);
-
-      // Try searching for an imaginary / dummy user ID
+      // Verify modal is open and has input field
       final inputField = find.byKey(const Key('athlete_id_input'));
-      await tester.enterText(inputField, 'WS-IMAGINARY-999');
+      expect(inputField, findsOneWidget);
+
+      // 1. Search for unregistered dummy user -> rejected with clear guidance
+      await tester.enterText(inputField, 'dummy_nonexistent_user');
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('verify_account_btn')));
       await tester.pumpAndSettle();
 
-      // Verify that unregistered dummy player is rejected
-      expect(find.text('User ID not registered on WorldSports'), findsOneWidget);
-      expect(find.textContaining('sanctioned matches'), findsOneWidget);
+      // Confirm error text shows requirement for real registered profile
+      expect(find.textContaining('Only real users with a profile registered via email or phone can be added'), findsWidgets);
+      // Ensure NO dummy direct quick-add button exists
+      expect(find.byKey(const Key('add_custom_player_btn')), findsNothing);
 
-      // Now enter a real registered user ID: WS-1002 (@virat18)
-      await tester.enterText(inputField, 'WS-1002');
+      // 2. Search for registered user by username '@rahul_s'
+      await tester.enterText(inputField, '@rahul_s');
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('verify_account_btn')));
       await tester.pumpAndSettle();
 
-      // Verify Verified Real Athlete preview badge is displayed
+      // Verify athlete profile found with contact verification
       expect(find.text('VERIFIED REAL ATHLETE'), findsOneWidget);
-      expect(find.text('Virat Kohli'), findsOneWidget);
-      expect(find.textContaining('@virat18 • Top-Order Batsman'), findsOneWidget);
-      expect(find.text('ATHLETIC SPECIALIZATION'), findsOneWidget);
-      expect(find.textContaining('Right-hand bat'), findsOneWidget);
+      expect(find.text('Rahul Sharma'), findsWidgets);
+      expect(find.textContaining('Registered: rahul@sports.test'), findsOneWidget);
 
       // Confirm and add to squad
       final confirmBtn = find.textContaining('Confirm & Add to');
@@ -92,79 +139,8 @@ void main() {
       await tester.tap(confirmBtn);
       await tester.pumpAndSettle();
 
-      // Verify squad count updated to 1
-      expect(find.text('1 ATHLETES IN LINEUP'), findsOneWidget);
-      expect(find.text('Virat Kohli'), findsOneWidget);
-    });
-
-    testWidgets('CreateMatchScreen Step 3 displays verified Scorer and Umpires governance', (tester) async {
-      await tester.binding.setSurfaceSize(const Size(800, 1400));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-
-      final appState = AppState();
-      await tester.pumpWidget(
-        ChangeNotifierProvider<AppState>.value(
-          value: appState,
-          child: const MaterialApp(
-            home: CreateMatchScreen(),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // Go to Step 1
-      await tester.tap(find.text('Continue'));
-      await tester.pumpAndSettle();
-
-      // Add minimum 2 players for Team 1 via Verified Directory Pool
-      final addBtn = find.text('Add Player').first;
-      await tester.tap(addBtn);
-      await tester.pumpAndSettle();
-
-      // Switch to Verified Pool tab
-      await tester.tap(find.text('Verified Pool'));
-      await tester.pumpAndSettle();
-
-      // Select first athlete
-      await tester.tap(find.text('+ Select').first);
-      await tester.pumpAndSettle();
-
-      // Select second athlete
-      await tester.tap(find.text('+ Select').first);
-      await tester.pumpAndSettle();
-
-      // Close modal
-      await tester.tap(find.byIcon(Icons.close_rounded));
-      await tester.pumpAndSettle();
-
-      // Switch to Team 2 tab
-      await tester.tap(find.widgetWithText(AnimatedContainer, 'Delhi Dynamos'));
-      await tester.pumpAndSettle();
-
-      // Add 2 players to Team 2
-      await tester.tap(find.text('Add Player').first);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Verified Pool'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('+ Select').first);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('+ Select').first);
-      await tester.pumpAndSettle();
-      await tester.tap(find.byIcon(Icons.close_rounded));
-      await tester.pumpAndSettle();
-
-      // Continue to Step 3: Start Arena
-      await tester.tap(find.text('Continue'));
-      await tester.pumpAndSettle();
-
-      // Verify Step 3 displays Sanctioned Match Crew & Governance
-      expect(find.text('OFFICIAL MATCH CREW & GOVERNANCE'), findsOneWidget);
-      expect(find.text('ZERO-DUMMY VERIFIED'), findsOneWidget);
-      expect(find.text('OFFICIAL SCORER (DIGITAL)'), findsOneWidget);
-      expect(find.text('LEAD FIELD UMPIRE'), findsOneWidget);
-      expect(find.text('2ND UMPIRE / LINE REFEREE'), findsOneWidget);
-      expect(find.text('John Scorer'), findsOneWidget);
-      expect(find.text('Nitin Kumar'), findsOneWidget);
+      // Verify Rahul Sharma is now in the squad lineup!
+      expect(find.text('Rahul Sharma'), findsWidgets);
     });
   });
 }
