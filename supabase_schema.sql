@@ -214,6 +214,7 @@ CREATE TABLE IF NOT EXISTS public.matches (
   team1_id TEXT DEFAULT '',
   team2_id TEXT DEFAULT '',
   team1_name TEXT NOT NULL,
+
   team2_name TEXT NOT NULL,
   team1_short TEXT DEFAULT '',
   team2_short TEXT DEFAULT '',
@@ -250,7 +251,9 @@ ALTER TABLE public.matches ADD COLUMN IF NOT EXISTS date_time TIMESTAMPTZ DEFAUL
 ALTER TABLE public.matches ADD COLUMN IF NOT EXISTS venue TEXT DEFAULT '';
 ALTER TABLE public.matches ADD COLUMN IF NOT EXISTS tournament_id TEXT DEFAULT '';
 ALTER TABLE public.matches ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'upcoming';
-ALTER TABLE public.matches ADD COLUMN IF NOT EXISTS score_data JSONB DEFAULT '{}'::jsonb;
+ALTER TABLE public.matches ADD COLUMN IF NOT EXISTS score_data J
+
+SONB DEFAULT '{}'::jsonb;
 ALTER TABLE public.matches ADD COLUMN IF NOT EXISTS format TEXT DEFAULT 'Standard';
 ALTER TABLE public.matches ADD COLUMN IF NOT EXISTS team1_players JSONB DEFAULT '[]'::jsonb;
 ALTER TABLE public.matches ADD COLUMN IF NOT EXISTS team2_players JSONB DEFAULT '[]'::jsonb;
