@@ -6,6 +6,22 @@ import '../state/app_state.dart';
 import 'user_storage_service.dart';
 import 'supabase_service.dart';
 
+export 'search/search_engine.dart';
+export 'search/search_history_service.dart';
+export 'search/algorithms/levenshtein_distance.dart';
+export 'search/algorithms/phonetic_algorithms.dart';
+export 'search/algorithms/bm25_ranking.dart';
+export 'search/algorithms/prefix_trie.dart';
+export 'search/algorithms/query_parser.dart';
+export 'search/algorithms/spell_corrector.dart';
+export 'search/algorithms/learning_to_rank.dart';
+
+import 'search/search_engine.dart';
+import 'search/search_history_service.dart';
+import 'search/algorithms/prefix_trie.dart';
+import 'search/algorithms/query_parser.dart';
+import 'search/algorithms/learning_to_rank.dart';
+
 /// Categories for the "What to search" filter.
 enum SearchCategory {
   all,
@@ -1054,65 +1070,71 @@ class SearchCatalogService {
     }
   }
 
-  /// Primary search and filter function.
+  /// Primary search and filter function powered by AdvancedSportsSearchEngine (BM25 + LTR).
   /// Matches query against entity name (title) OR any description/subtitle/location/tags.
   /// Supports:
   /// - What to search: [category]
   /// - Location: [location]
   /// - By sports: [sport]
+  /// - Sort: [sortStrategy]
   static List<SearchResultItem> search({
     required String query,
     SearchCategory category = SearchCategory.all,
     String? location,
     SportType? sport,
+    SearchSortStrategy sortStrategy = SearchSortStrategy.relevance,
   }) {
     final allItems = getAllItems();
-    final cleanQuery = query.trim().toLowerCase();
-    final cleanLocation = (location == null || location.isEmpty || location == 'All Locations' || location == 'All')
-        ? null
-        : location.trim().toLowerCase();
+    final matches = AdvancedSportsSearchEngine.instance.executeSearch(
+      catalog: allItems,
+      query: query,
+      category: category,
+      location: location,
+      sport: sport,
+      sortStrategy: sortStrategy,
+      limit: 150,
+    );
+    return matches.map((m) => m.item).toList();
+  }
 
-    final filtered = allItems.where((item) {
-      // 1. Filter by Category ("What to search")
-      if (category != SearchCategory.all && item.category != category) {
-        return false;
-      }
+  /// Advanced multi-signal search returning rich algorithmic metrics (BM25, LTR, fuzzy, highlights, snippets).
+  static List<SearchResultMatch> advancedSearch({
+    required String query,
+    SearchCategory category = SearchCategory.all,
+    String? location,
+    SportType? sport,
+    SearchSortStrategy sortStrategy = SearchSortStrategy.relevance,
+    int limit = 60,
+  }) {
+    final allItems = getAllItems();
+    return AdvancedSportsSearchEngine.instance.executeSearch(
+      catalog: allItems,
+      query: query,
+      category: category,
+      location: location,
+      sport: sport,
+      sortStrategy: sortStrategy,
+      limit: limit,
+    );
+  }
 
-      // 2. Filter by Sports ("By sports")
-      if (sport != null) {
-        final matchesSport = item.matchesSport(sport) || (item.sport == null && item.sports.isEmpty);
-        if (!matchesSport) return false;
-      }
+  /// Instant Trie-powered autocompletion predictions in O(k) time.
+  static List<AutocompleteSuggestion> getAutocompleteSuggestions(String query, {int limit = 6}) {
+    final allItems = getAllItems();
+    AdvancedSportsSearchEngine.instance.ensureIndexBuilt(allItems);
+    return AdvancedSportsSearchEngine.instance.getAutocompleteSuggestions(query, limit: limit);
+  }
 
-      // 3. Filter by Location ("Location")
-      if (cleanLocation != null) {
-        final locMatches = item.location.toLowerCase().contains(cleanLocation);
-        if (!locMatches) return false;
-      }
+  /// Spell check query and return "Did you mean?" suggestion if confident correction found.
+  static String? getSpellCheckCorrection(String query) {
+    final allItems = getAllItems();
+    AdvancedSportsSearchEngine.instance.ensureIndexBuilt(allItems);
+    return AdvancedSportsSearchEngine.instance.getSpellCheckCorrection(query);
+  }
 
-      // 4. Match Query against Name or ANY Description / Subtitle / Tag
-      if (cleanQuery.isEmpty) return true;
-
-      // Substring match checks
-      final titleMatch = item.title.toLowerCase().contains(cleanQuery);
-      final descMatch = item.description.toLowerCase().contains(cleanQuery);
-      final subtitleMatch = item.subtitle.toLowerCase().contains(cleanQuery);
-      final locMatch = item.location.toLowerCase().contains(cleanQuery);
-      final tagMatch = item.tags.any((t) => t.toLowerCase().contains(cleanQuery));
-
-      return titleMatch || descMatch || subtitleMatch || locMatch || tagMatch;
-    }).toList();
-
-    // Sort by relevance score
-    if (cleanQuery.isNotEmpty) {
-      filtered.sort((a, b) {
-        final scoreA = _calculateRelevance(a, cleanQuery);
-        final scoreB = _calculateRelevance(b, cleanQuery);
-        return scoreB.compareTo(scoreA);
-      });
-    }
-
-    return filtered;
+  /// Semantic Intent Parsing for sports conversational queries.
+  static ParsedQueryIntent parseQueryIntent(String query) {
+    return AdvancedSportsSearchEngine.instance.parseIntent(query);
   }
 
   /// Calculates relevance weighting so exact/prefix title matches rank highest.

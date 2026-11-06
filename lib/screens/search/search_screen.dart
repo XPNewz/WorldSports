@@ -30,6 +30,12 @@ class _SearchScreenState extends State<SearchScreen> {
   late SportType? _selectedSport;
   late String _selectedLocation;
 
+  SearchSortStrategy _selectedSort = SearchSortStrategy.relevance;
+  List<String> _recentSearches = [];
+  List<AutocompleteSuggestion> _autocompleteSuggestions = [];
+  String? _spellingCorrection;
+  ParsedQueryIntent? _parsedIntent;
+
   void initStateDatabase() {
     _searchController = TextEditingController(text: widget.initialQuery ?? '');
     _selectedCategory = widget.initialCategory;
@@ -41,9 +47,28 @@ class _SearchScreenState extends State<SearchScreen> {
   void initState() {
     super.initState();
     initStateDatabase();
+    _loadRecentSearches();
     SearchCatalogService.syncDynamicAthletesFromStorage().then((_) {
       if (mounted) setState(() {});
     });
+  }
+
+  void _loadRecentSearches() async {
+    final history = await SearchHistoryService.getRecentSearches();
+    if (mounted) {
+      setState(() {
+        _recentSearches = history;
+      });
+    }
+  }
+
+  void _onQueryChanged(String val) {
+    setState(() {
+      _autocompleteSuggestions = SearchCatalogService.getAutocompleteSuggestions(val);
+      _spellingCorrection = SearchCatalogService.getSpellCheckCorrection(val);
+      _parsedIntent = SearchCatalogService.parseQueryIntent(val);
+    });
+    _performLiveAthleteSearch(val);
   }
 
   void _performLiveAthleteSearch(String query) async {
@@ -72,6 +97,9 @@ class _SearchScreenState extends State<SearchScreen> {
       _selectedCategory = SearchCategory.all;
       _selectedSport = null;
       _selectedLocation = 'All Locations';
+      _autocompleteSuggestions = [];
+      _spellingCorrection = null;
+      _parsedIntent = null;
     });
   }
 
@@ -85,11 +113,12 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   Widget build(BuildContext context) {
     final query = _searchController.text;
-    final results = SearchCatalogService.search(
+    final matches = SearchCatalogService.advancedSearch(
       query: query,
       category: _selectedCategory,
       location: _selectedLocation,
       sport: _selectedSport,
+      sortStrategy: _selectedSort,
     );
 
     final categoryCounts = SearchCatalogService.getCategoryCounts(
@@ -109,6 +138,19 @@ class _SearchScreenState extends State<SearchScreen> {
             // ── TOP APP BAR & MODERN SEARCH BAR WITH FILTER BUTTON ───────────
             _buildSearchBarHeader(activeFiltersCount),
 
+            // ── PREDICTIVE TYPEAHEAD AUTOCOMPLETE STRIP ───────────────────────
+            if (_autocompleteSuggestions.isNotEmpty && _searchController.text.trim().isNotEmpty)
+              _buildAutocompleteStrip(),
+
+            // ── "DID YOU MEAN?" SPELL CORRECTION BANNER ────────────────────────
+            if (_spellingCorrection != null &&
+                _spellingCorrection!.toLowerCase() != _searchController.text.trim().toLowerCase())
+              _buildSpellCorrectionBanner(),
+
+            // ── SEMANTIC INTENT CLASSIFICATION CHIPS ─────────────────────────
+            if (_parsedIntent != null && _parsedIntent!.hasExtractedFacets)
+              _buildDetectedIntentBar(),
+
             // ── "WHAT TO SEARCH" CATEGORY BAR ──────────────────────────────
             _buildCategoryBar(categoryCounts),
 
@@ -117,20 +159,20 @@ class _SearchScreenState extends State<SearchScreen> {
               _buildActiveFilterChips(),
 
             // ── RESULTS HEADER / SUMMARY ────────────────────────────────────
-            _buildResultsSummaryBar(results.length),
+            _buildResultsSummaryBar(matches.length),
 
             // ── SEARCH RESULTS LIST / EMPTY STATE ───────────────────────────
             Expanded(
-              child: results.isEmpty
+              child: matches.isEmpty
                   ? _buildEmptyState()
                   : ListView.separated(
                       physics: const BouncingScrollPhysics(),
                       padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-                      itemCount: results.length,
+                      itemCount: matches.length,
                       separatorBuilder: (_, _) => const SizedBox(height: 12),
                       itemBuilder: (ctx, index) {
-                        final item = results[index];
-                        return _buildResultCard(item, query);
+                        final match = matches[index];
+                        return _buildResultCard(match, query);
                       },
                     ),
             ),
@@ -206,9 +248,12 @@ class _SearchScreenState extends State<SearchScreen> {
                     child: TextField(
                       controller: _searchController,
                       autofocus: true,
-                      onChanged: (val) {
-                        setState(() {});
-                        _performLiveAthleteSearch(val);
+                      onChanged: _onQueryChanged,
+                      onSubmitted: (term) {
+                        if (term.trim().isNotEmpty) {
+                          SearchHistoryService.addQuery(term.trim());
+                          _loadRecentSearches();
+                        }
                       },
                       style: GoogleFonts.outfit(
                         color: const Color(0xFF0F172A),
@@ -233,6 +278,9 @@ class _SearchScreenState extends State<SearchScreen> {
                       onTap: () {
                         setState(() {
                           _searchController.clear();
+                          _autocompleteSuggestions = [];
+                          _spellingCorrection = null;
+                          _parsedIntent = null;
                         });
                       },
                       child: Container(
@@ -311,6 +359,231 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ── 1b. Predictive Typeahead Autocomplete Strip ────────────────────────────
+  Widget _buildAutocompleteStrip() {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.flash_on_rounded, size: 12, color: AppColors.primary),
+              const SizedBox(width: 4),
+              Text(
+                'PREDICTIVE SUGGESTIONS',
+                style: GoogleFonts.outfit(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF64748B),
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          SizedBox(
+            height: 32,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _autocompleteSuggestions.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 6),
+              itemBuilder: (ctx, i) {
+                final sug = _autocompleteSuggestions[i];
+                return BouncingTap(
+                  onTap: () {
+                    setState(() {
+                      _searchController.text = sug.text;
+                      _autocompleteSuggestions = [];
+                    });
+                    SearchHistoryService.addQuery(sug.text);
+                    _loadRecentSearches();
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFCBD5E1)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.north_west_rounded, size: 10, color: Color(0xFF64748B)),
+                        const SizedBox(width: 5),
+                        Text(
+                          sug.text,
+                          style: GoogleFonts.outfit(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF0F172A),
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          sug.category.toUpperCase(),
+                          style: GoogleFonts.outfit(
+                            fontSize: 8.5,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── 1c. "Did You Mean?" Spell Correction Banner ────────────────────────────
+  Widget _buildSpellCorrectionBanner() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 6, 16, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEFF6FF),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFBFDBFE)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.auto_fix_high_rounded, size: 16, color: Color(0xFF2563EB)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Text(
+                  'Did you mean: ',
+                  style: GoogleFonts.outfit(fontSize: 12.5, color: const Color(0xFF1E293B)),
+                ),
+                Text(
+                  _spellingCorrection!,
+                  style: GoogleFonts.outfit(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF2563EB),
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+                Text(
+                  '?',
+                  style: GoogleFonts.outfit(fontSize: 12.5, color: const Color(0xFF1E293B)),
+                ),
+              ],
+            ),
+          ),
+          BouncingTap(
+            onTap: () {
+              setState(() {
+                _searchController.text = _spellingCorrection!;
+                _spellingCorrection = null;
+              });
+              SearchHistoryService.addQuery(_searchController.text);
+              _loadRecentSearches();
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2563EB),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                'APPLY',
+                style: GoogleFonts.outfit(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── 1d. Semantic Intent Classification Chips ───────────────────────────────
+  Widget _buildDetectedIntentBar() {
+    final intent = _parsedIntent;
+    if (intent == null) return const SizedBox.shrink();
+
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            const Icon(Icons.psychology_rounded, size: 13, color: Color(0xFF64748B)),
+            const SizedBox(width: 4),
+            Text(
+              'INTENT: ',
+              style: GoogleFonts.outfit(
+                fontSize: 9.5,
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF64748B),
+                letterSpacing: 0.5,
+              ),
+            ),
+            if (intent.detectedCategory != null) ...[
+              _buildIntentPill(
+                label: intent.detectedCategory!.label.toUpperCase(),
+                color: AppColors.primary,
+              ),
+              const SizedBox(width: 5),
+            ],
+            if (intent.detectedSport != null) ...[
+              _buildIntentPill(
+                label: intent.detectedSport!.name.toUpperCase(),
+                color: const Color(0xFF10B981),
+              ),
+              const SizedBox(width: 5),
+            ],
+            if (intent.detectedLocation != null) ...[
+              _buildIntentPill(
+                label: intent.detectedLocation!.toUpperCase(),
+                color: const Color(0xFF0F172A),
+              ),
+              const SizedBox(width: 5),
+            ],
+            if (intent.maxPrice != null) ...[
+              _buildIntentPill(
+                label: '<= ₹${intent.maxPrice}',
+                color: const Color(0xFFD97706),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildIntentPill({required String label, required Color color}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.outfit(
+          fontSize: 9,
+          fontWeight: FontWeight.w800,
+          color: color,
+        ),
       ),
     );
   }
@@ -955,10 +1228,10 @@ class _SearchScreenState extends State<SearchScreen> {
       ),
       child: Row(
         children: [
-          Icon(
+          const Icon(
             Icons.format_list_bulleted_rounded,
             size: 14,
-            color: const Color(0xFF64748B),
+            color: Color(0xFF64748B),
           ),
           const SizedBox(width: 6),
           Text(
@@ -990,24 +1263,86 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
           ],
           const Spacer(),
-          if (_searchController.text.isNotEmpty)
-            Text(
-              'Keyword: "${_searchController.text.trim()}"',
-              style: GoogleFonts.outfit(
-                fontSize: 11,
-                fontStyle: FontStyle.italic,
-                color: const Color(0xFF64748B),
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+          // AI Sorting Strategy Menu
+          PopupMenuButton<SearchSortStrategy>(
+            key: const Key('sort_strategy_btn'),
+            initialValue: _selectedSort,
+            tooltip: 'Sort Results',
+            onSelected: (strategy) {
+              setState(() {
+                _selectedSort = strategy;
+              });
+            },
+            color: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: Color(0xFFE2E8F0)),
             ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFCBD5E1)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.sort_rounded, size: 13, color: AppColors.primary),
+                  const SizedBox(width: 4),
+                  Text(
+                    _selectedSort == SearchSortStrategy.relevance
+                        ? 'AI Relevance'
+                        : _selectedSort.label,
+                    style: GoogleFonts.outfit(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF0F172A),
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  const Icon(Icons.arrow_drop_down_rounded, size: 16, color: Color(0xFF64748B)),
+                ],
+              ),
+            ),
+            itemBuilder: (ctx) => SearchSortStrategy.values.map((strat) {
+              return PopupMenuItem<SearchSortStrategy>(
+                value: strat,
+                child: Row(
+                  children: [
+                    Icon(
+                      _selectedSort == strat ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                      size: 15,
+                      color: _selectedSort == strat ? AppColors.primary : const Color(0xFF94A3B8),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        strat.label,
+                        style: GoogleFonts.outfit(
+                          fontSize: 11.5,
+                          fontWeight: _selectedSort == strat ? FontWeight.w800 : FontWeight.w600,
+                          color: _selectedSort == strat ? AppColors.primary : const Color(0xFF0F172A),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
         ],
       ),
     );
   }
 
   // ── 4. Result Card with High-End Category Badges & Action Buttons ───────────
-  Widget _buildResultCard(SearchResultItem item, String currentQuery) {
+  Widget _buildResultCard(dynamic result, String currentQuery) {
+    final SearchResultItem item = result is SearchResultMatch ? result.item : (result as SearchResultItem);
+    final SearchResultMatch? match = result is SearchResultMatch ? result : null;
+
     return BouncingTap(
       onTap: () => _openEntityDetailsModal(context, item),
       child: Container(
@@ -1069,6 +1404,11 @@ class _SearchScreenState extends State<SearchScreen> {
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
+                            if (match?.isVerifiedPro == true)
+                              const Padding(
+                                padding: EdgeInsets.only(left: 4),
+                                child: Icon(Icons.verified_rounded, size: 15, color: Color(0xFF0284C7)),
+                              ),
                             const SizedBox(width: 6),
                             // Category Badge
                             Container(
@@ -1090,6 +1430,36 @@ class _SearchScreenState extends State<SearchScreen> {
                                 ),
                               ),
                             ),
+                            // Algorithmic Match Percentage Badge
+                            if (match != null && currentQuery.trim().isNotEmpty) ...[
+                              const SizedBox(width: 5),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                decoration: BoxDecoration(
+                                  color: match.matchPercentage >= 90
+                                      ? const Color(0xFF10B981).withValues(alpha: 0.12)
+                                      : const Color(0xFF0284C7).withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(
+                                    color: match.matchPercentage >= 90
+                                        ? const Color(0xFF10B981).withValues(alpha: 0.3)
+                                        : const Color(0xFF0284C7).withValues(alpha: 0.3),
+                                    width: 0.8,
+                                  ),
+                                ),
+                                child: Text(
+                                  '${match.matchPercentage}% MATCH',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.w900,
+                                    color: match.matchPercentage >= 90
+                                        ? const Color(0xFF059669)
+                                        : const Color(0xFF0284C7),
+                                    letterSpacing: 0.4,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                         const SizedBox(height: 3),
@@ -1142,7 +1512,12 @@ class _SearchScreenState extends State<SearchScreen> {
             // Description Body (Matches query directly)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14),
-              child: _buildHighlightedDescription(item.description, currentQuery),
+              child: _buildHighlightedDescription(
+                match?.contextualSnippet.isNotEmpty == true
+                    ? match!.contextualSnippet
+                    : item.description,
+                currentQuery,
+              ),
             ),
 
             const SizedBox(height: 10),
@@ -1379,6 +1754,83 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
             ),
           ),
+          if (_recentSearches.isNotEmpty) ...[
+            const SizedBox(height: 28),
+            Row(
+              children: [
+                const Icon(Icons.history_rounded, size: 14, color: Color(0xFF64748B)),
+                const SizedBox(width: 5),
+                Text(
+                  'RECENT SEARCHES',
+                  style: GoogleFonts.outfit(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF64748B),
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                const Spacer(),
+                BouncingTap(
+                  onTap: () async {
+                    await SearchHistoryService.clearAll();
+                    _loadRecentSearches();
+                  },
+                  child: Text(
+                    'CLEAR',
+                    style: GoogleFonts.outfit(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _recentSearches.map((term) {
+                return Container(
+                  padding: const EdgeInsets.fromLTRB(10, 6, 6, 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFCBD5E1)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      BouncingTap(
+                        onTap: () {
+                          setState(() {
+                            _searchController.text = term;
+                          });
+                          _onQueryChanged(term);
+                        },
+                        child: Text(
+                          term,
+                          style: GoogleFonts.outfit(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF0F172A),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      BouncingTap(
+                        onTap: () async {
+                          await SearchHistoryService.removeQuery(term);
+                          _loadRecentSearches();
+                        },
+                        child: const Icon(Icons.close_rounded, size: 13, color: Color(0xFF94A3B8)),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
           const SizedBox(height: 36),
           Align(
             alignment: Alignment.centerLeft,

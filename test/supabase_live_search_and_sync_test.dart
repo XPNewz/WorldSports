@@ -25,6 +25,7 @@ void main() {
         jerseyNumber: 1,
         role: 'BATSMAN',
         specsSummary: 'Right-hand bat • Wicketkeeper',
+        email: 'klrahul@worldsports.test',
       ),
       const MatchPlayer(
         id: 'remote_ath_102',
@@ -34,6 +35,7 @@ void main() {
         jerseyNumber: 73,
         role: 'BOWLER',
         specsSummary: 'Right-arm fast',
+        phone: '+919876543211',
       ),
     ];
 
