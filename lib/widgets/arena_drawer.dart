@@ -80,7 +80,11 @@ class ArenaDrawer extends StatelessWidget {
                     ],
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B), size: 22),
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      color: Color(0xFF64748B),
+                      size: 22,
+                    ),
                     splashRadius: 20,
                     onPressed: () => Navigator.of(context).pop(),
                   ),
@@ -92,7 +96,10 @@ class ArenaDrawer extends StatelessWidget {
             Expanded(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -114,7 +121,9 @@ class ArenaDrawer extends StatelessWidget {
                       onTap: () {
                         Navigator.of(context).pop();
                         Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const CreateMatchScreen()),
+                          MaterialPageRoute(
+                            builder: (_) => const CreateMatchScreen(),
+                          ),
                         );
                       },
                     ),
@@ -255,16 +264,22 @@ class ArenaDrawer extends StatelessWidget {
                                     Navigator.of(context).pop();
                                     Navigator.of(context).push(
                                       MaterialPageRoute(
-                                        builder: (_) => const SplashScreen(forceFirstTime: true),
+                                        builder: (_) => const SplashScreen(
+                                          forceFirstTime: true,
+                                        ),
                                       ),
                                     );
                                   },
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(vertical: 7),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 7,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: Colors.white,
                                       borderRadius: BorderRadius.circular(6),
-                                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                                      border: Border.all(
+                                        color: const Color(0xFFE2E8F0),
+                                      ),
                                     ),
                                     alignment: Alignment.center,
                                     child: Text(
@@ -286,16 +301,22 @@ class ArenaDrawer extends StatelessWidget {
                                     Navigator.of(context).pop();
                                     Navigator.of(context).push(
                                       MaterialPageRoute(
-                                        builder: (_) => const SplashScreen(forceFirstTime: false),
+                                        builder: (_) => const SplashScreen(
+                                          forceFirstTime: false,
+                                        ),
                                       ),
                                     );
                                   },
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(vertical: 7),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 7,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: Colors.white,
                                       borderRadius: BorderRadius.circular(6),
-                                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                                      border: Border.all(
+                                        color: const Color(0xFFE2E8F0),
+                                      ),
                                     ),
                                     alignment: Alignment.center,
                                     child: Text(
@@ -322,10 +343,17 @@ class ArenaDrawer extends StatelessWidget {
                       borderRadius: BorderRadius.circular(10),
                       onTap: () => _showLogoutConfirmDialog(context),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 10,
+                        ),
                         child: Row(
                           children: [
-                            const Icon(Icons.logout_rounded, color: Color(0xFFDC2626), size: 20),
+                            const Icon(
+                              Icons.logout_rounded,
+                              color: Color(0xFFDC2626),
+                              size: 20,
+                            ),
                             const SizedBox(width: 14),
                             Text(
                               'Log Out',
@@ -399,7 +427,11 @@ class ArenaDrawer extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 4),
-                    const Icon(Icons.verified_rounded, color: AppColors.primary, size: 15),
+                    const Icon(
+                      Icons.verified_rounded,
+                      color: AppColors.primary,
+                      size: 15,
+                    ),
                   ],
                 ),
                 Text(
@@ -423,7 +455,9 @@ class ArenaDrawer extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                border: Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.3),
+                ),
               ),
               child: Text(
                 'PROFILE',
@@ -481,7 +515,9 @@ class ArenaDrawer extends StatelessWidget {
               children: [
                 Icon(
                   icon,
-                  color: isPrimary ? AppColors.primary : const Color(0xFF0F172A),
+                  color: isPrimary
+                      ? AppColors.primary
+                      : const Color(0xFF0F172A),
                   size: 22,
                 ),
                 const SizedBox(width: 14),
@@ -493,7 +529,9 @@ class ArenaDrawer extends StatelessWidget {
                           title,
                           style: GoogleFonts.outfit(
                             fontSize: 14.5,
-                            fontWeight: isPrimary ? FontWeight.w800 : FontWeight.w600,
+                            fontWeight: isPrimary
+                                ? FontWeight.w800
+                                : FontWeight.w600,
                             color: const Color(0xFF0F172A),
                           ),
                           maxLines: 1,
@@ -503,7 +541,10 @@ class ArenaDrawer extends StatelessWidget {
                       if (badgeText != null) ...[
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.primary.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(4),
@@ -547,14 +588,20 @@ class ArenaDrawer extends StatelessWidget {
         ),
         content: Text(
           'Are you sure you want to log out? Your stats and match records remain safely saved.',
-          style: GoogleFonts.outfit(fontSize: 13.5, color: const Color(0xFF64748B)),
+          style: GoogleFonts.outfit(
+            fontSize: 13.5,
+            color: const Color(0xFF64748B),
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogCtx).pop(),
             child: Text(
               'Cancel',
-              style: GoogleFonts.outfit(fontWeight: FontWeight.w700, color: const Color(0xFF64748B)),
+              style: GoogleFonts.outfit(
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF64748B),
+              ),
             ),
           ),
           ElevatedButton(
@@ -562,14 +609,18 @@ class ArenaDrawer extends StatelessWidget {
               backgroundColor: const Color(0xFFDC2626),
               foregroundColor: Colors.white,
               elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
             onPressed: () {
               Navigator.of(dialogCtx).pop();
               Navigator.of(context).pop();
               context.read<AppState>().logout();
               Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const SplashScreen(forceFirstTime: false)),
+                MaterialPageRoute(
+                  builder: (_) => const SplashScreen(forceFirstTime: false),
+                ),
               );
             },
             child: Text(
@@ -665,11 +716,15 @@ class ArenaDrawer extends StatelessWidget {
 
 class _CreateTournamentBottomSheet extends StatefulWidget {
   @override
-  State<_CreateTournamentBottomSheet> createState() => _CreateTournamentBottomSheetState();
+  State<_CreateTournamentBottomSheet> createState() =>
+      _CreateTournamentBottomSheetState();
 }
 
-class _CreateTournamentBottomSheetState extends State<_CreateTournamentBottomSheet> {
-  final _nameCtrl = TextEditingController(text: 'Mumbai Premier Champions Trophy');
+class _CreateTournamentBottomSheetState
+    extends State<_CreateTournamentBottomSheet> {
+  final _nameCtrl = TextEditingController(
+    text: 'Mumbai Premier Champions Trophy',
+  );
   final _venueCtrl = TextEditingController(text: 'Wankhede Arena, Mumbai');
   final _prizePoolCtrl = TextEditingController(text: '₹2,50,000');
   SportType _selectedSport = SportType.cricket;
@@ -711,13 +766,33 @@ class _CreateTournamentBottomSheetState extends State<_CreateTournamentBottomShe
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      _buildSportOption(SportType.cricket, 'Cricket', Icons.sports_cricket_rounded, AppColors.cricket),
+                      _buildSportOption(
+                        SportType.cricket,
+                        'Cricket',
+                        Icons.sports_cricket_rounded,
+                        AppColors.cricket,
+                      ),
                       const SizedBox(width: 8),
-                      _buildSportOption(SportType.football, 'Football', Icons.sports_soccer_rounded, AppColors.football),
+                      _buildSportOption(
+                        SportType.football,
+                        'Football',
+                        Icons.sports_soccer_rounded,
+                        AppColors.football,
+                      ),
                       const SizedBox(width: 8),
-                      _buildSportOption(SportType.basketball, 'Basketball', Icons.sports_basketball_rounded, AppColors.basketball),
+                      _buildSportOption(
+                        SportType.basketball,
+                        'Basketball',
+                        Icons.sports_basketball_rounded,
+                        AppColors.basketball,
+                      ),
                       const SizedBox(width: 8),
-                      _buildSportOption(SportType.tennis, 'Tennis', Icons.sports_tennis_rounded, AppColors.tennis),
+                      _buildSportOption(
+                        SportType.tennis,
+                        'Tennis',
+                        Icons.sports_tennis_rounded,
+                        AppColors.tennis,
+                      ),
                     ],
                   ),
                   const SizedBox(height: 18),
@@ -725,7 +800,11 @@ class _CreateTournamentBottomSheetState extends State<_CreateTournamentBottomShe
                   // Tournament Title
                   _buildFormLabel('TOURNAMENT / SERIES TITLE'),
                   const SizedBox(height: 8),
-                  _buildInputField(_nameCtrl, 'e.g. Maharashtra Monsoon Cup 2026', Icons.emoji_events_outlined),
+                  _buildInputField(
+                    _nameCtrl,
+                    'e.g. Maharashtra Monsoon Cup 2026',
+                    Icons.emoji_events_outlined,
+                  ),
                   const SizedBox(height: 18),
 
                   // Format
@@ -756,10 +835,14 @@ class _CreateTournamentBottomSheetState extends State<_CreateTournamentBottomShe
                             margin: const EdgeInsets.symmetric(horizontal: 3),
                             padding: const EdgeInsets.symmetric(vertical: 9),
                             decoration: BoxDecoration(
-                              color: isSel ? AppColors.primary : const Color(0xFFF8FAFC),
+                              color: isSel
+                                  ? AppColors.primary
+                                  : const Color(0xFFF8FAFC),
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
-                                color: isSel ? AppColors.primary : const Color(0xFFE2E8F0),
+                                color: isSel
+                                    ? AppColors.primary
+                                    : const Color(0xFFE2E8F0),
                               ),
                             ),
                             alignment: Alignment.center,
@@ -768,7 +851,9 @@ class _CreateTournamentBottomSheetState extends State<_CreateTournamentBottomShe
                               style: GoogleFonts.outfit(
                                 fontWeight: FontWeight.w800,
                                 fontSize: 13.5,
-                                color: isSel ? Colors.white : const Color(0xFF0F172A),
+                                color: isSel
+                                    ? Colors.white
+                                    : const Color(0xFF0F172A),
                               ),
                             ),
                           ),
@@ -787,7 +872,11 @@ class _CreateTournamentBottomSheetState extends State<_CreateTournamentBottomShe
                           children: [
                             _buildFormLabel('PRIZE POOL'),
                             const SizedBox(height: 8),
-                            _buildInputField(_prizePoolCtrl, '₹1,00,000', Icons.currency_rupee_rounded),
+                            _buildInputField(
+                              _prizePoolCtrl,
+                              '₹1,00,000',
+                              Icons.currency_rupee_rounded,
+                            ),
                           ],
                         ),
                       ),
@@ -798,7 +887,11 @@ class _CreateTournamentBottomSheetState extends State<_CreateTournamentBottomShe
                           children: [
                             _buildFormLabel('HOST VENUE / CITY'),
                             const SizedBox(height: 8),
-                            _buildInputField(_venueCtrl, 'City or Stadium', Icons.location_on_outlined),
+                            _buildInputField(
+                              _venueCtrl,
+                              'City or Stadium',
+                              Icons.location_on_outlined,
+                            ),
                           ],
                         ),
                       ),
@@ -815,15 +908,21 @@ class _CreateTournamentBottomSheetState extends State<_CreateTournamentBottomShe
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
                         elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
                       onPressed: () {
                         final newTourn = TournamentModel(
                           id: 'tr_${DateTime.now().millisecondsSinceEpoch}',
-                          name: _nameCtrl.text.trim().isEmpty ? 'WorldSports Series' : _nameCtrl.text.trim(),
+                          name: _nameCtrl.text.trim().isEmpty
+                              ? 'WorldSports Series'
+                              : _nameCtrl.text.trim(),
                           sport: _selectedSport,
                           organiserId: 'u001',
-                          startDate: DateTime.now().add(const Duration(days: 3)),
+                          startDate: DateTime.now().add(
+                            const Duration(days: 3),
+                          ),
                           endDate: DateTime.now().add(const Duration(days: 14)),
                           location: _venueCtrl.text.trim(),
                           teamsCount: _teamsCount,
@@ -841,12 +940,17 @@ class _CreateTournamentBottomSheetState extends State<_CreateTournamentBottomShe
                             behavior: SnackBarBehavior.floating,
                             content: Row(
                               children: [
-                                const Icon(Icons.check_circle_rounded, color: Colors.white),
+                                const Icon(
+                                  Icons.check_circle_rounded,
+                                  color: Colors.white,
+                                ),
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: Text(
                                     'Tournament "${newTourn.name}" created successfully!',
-                                    style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
+                                    style: GoogleFonts.outfit(
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -854,12 +958,18 @@ class _CreateTournamentBottomSheetState extends State<_CreateTournamentBottomShe
                           ),
                         );
                         Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const TournamentsScreen()),
+                          MaterialPageRoute(
+                            builder: (_) => const TournamentsScreen(),
+                          ),
                         );
                       },
                       child: Text(
                         'PUBLISH TOURNAMENT',
-                        style: GoogleFonts.outfit(fontWeight: FontWeight.w800, fontSize: 13, letterSpacing: 0.5),
+                        style: GoogleFonts.outfit(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                          letterSpacing: 0.5,
+                        ),
                       ),
                     ),
                   ),
@@ -872,7 +982,12 @@ class _CreateTournamentBottomSheetState extends State<_CreateTournamentBottomShe
     );
   }
 
-  Widget _buildSportOption(SportType sport, String label, IconData icon, Color sportColor) {
+  Widget _buildSportOption(
+    SportType sport,
+    String label,
+    IconData icon,
+    Color sportColor,
+  ) {
     final isSel = _selectedSport == sport;
     return Expanded(
       child: GestureDetector(
@@ -880,7 +995,9 @@ class _CreateTournamentBottomSheetState extends State<_CreateTournamentBottomShe
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: isSel ? sportColor.withValues(alpha: 0.1) : const Color(0xFFF8FAFC),
+            color: isSel
+                ? sportColor.withValues(alpha: 0.1)
+                : const Color(0xFFF8FAFC),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: isSel ? sportColor : const Color(0xFFE2E8F0),
@@ -889,7 +1006,11 @@ class _CreateTournamentBottomSheetState extends State<_CreateTournamentBottomShe
           ),
           child: Column(
             children: [
-              Icon(icon, color: isSel ? sportColor : const Color(0xFF64748B), size: 20),
+              Icon(
+                icon,
+                color: isSel ? sportColor : const Color(0xFF64748B),
+                size: 20,
+              ),
               const SizedBox(height: 4),
               Text(
                 label,
@@ -936,82 +1057,13 @@ class _CreateTournamentBottomSheetState extends State<_CreateTournamentBottomShe
 // 3. STORE (Clean Gear Cards, Ground Green Pricing)
 // ═════════════════════════════════════════════════════════════════════════════
 
-class _WorldSportsStoreBottomSheet extends StatefulWidget {
+class _WorldSportsStoreBottomSheet extends StatelessWidget {
   const _WorldSportsStoreBottomSheet();
 
   @override
-  State<_WorldSportsStoreBottomSheet> createState() => _WorldSportsStoreBottomSheetState();
-}
-
-class _WorldSportsStoreBottomSheetState extends State<_WorldSportsStoreBottomSheet> {
-  int _cartCount = 0;
-  String _selectedCategory = 'All Gear';
-
-  final List<Map<String, dynamic>> _products = const [
-    {
-      'title': 'WorldSports Pro Match Cricket Balls (Box of 6)',
-      'category': 'Equipment',
-      'price': '₹2,499',
-      'original': '₹3,200',
-      'rating': '4.9',
-      'sport': 'Cricket',
-      'icon': Icons.sports_cricket_rounded,
-    },
-    {
-      'title': 'English Willow Grade 1 Master Bat',
-      'category': 'Equipment',
-      'price': '₹14,999',
-      'original': '₹18,500',
-      'rating': '5.0',
-      'sport': 'Cricket',
-      'icon': Icons.sports_cricket_rounded,
-    },
-    {
-      'title': 'AeroShield Athlete Compression Match Jersey',
-      'category': 'Kits',
-      'price': '₹1,899',
-      'original': '₹2,499',
-      'rating': '4.8',
-      'sport': 'Football',
-      'icon': Icons.checkroom_rounded,
-    },
-    {
-      'title': 'SpeedGrip Hybrid Turf & Ground Studs',
-      'category': 'Footwear',
-      'price': '₹3,799',
-      'original': '₹4,999',
-      'rating': '4.9',
-      'sport': 'Multi-Sport',
-      'icon': Icons.directions_run_rounded,
-    },
-    {
-      'title': 'Pro Tour Carbon Tennis Racket + Cover',
-      'category': 'Equipment',
-      'price': '₹8,999',
-      'original': '₹11,000',
-      'rating': '4.9',
-      'sport': 'Tennis',
-      'icon': Icons.sports_tennis_rounded,
-    },
-    {
-      'title': 'Official Microfiber Match Basketball (Size 7)',
-      'category': 'Equipment',
-      'price': '₹1,799',
-      'original': '₹2,299',
-      'rating': '4.8',
-      'sport': 'Basketball',
-      'icon': Icons.sports_basketball_rounded,
-    },
-  ];
-
-  @override
   Widget build(BuildContext context) {
-    final filtered = _selectedCategory == 'All Gear'
-        ? _products
-        : _products.where((p) => p['category'] == _selectedCategory).toList();
-
     return Container(
-      height: MediaQuery.of(context).size.height * 0.9,
+      height: MediaQuery.of(context).size.height * 0.88,
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -1020,179 +1072,43 @@ class _WorldSportsStoreBottomSheetState extends State<_WorldSportsStoreBottomShe
         children: [
           _buildDragHandle(),
           _buildSheetHeader(
-            title: 'Store',
-            subtitle: 'Official equipment, match kits & athlete gear',
+            title: 'WorldSports Store',
+            subtitle: 'Official equipment, match kits & verified athlete gear',
             icon: Icons.storefront_outlined,
-            trailing: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.shopping_bag_outlined, color: AppColors.primary, size: 16),
-                  const SizedBox(width: 4),
-                  Text(
-                    '$_cartCount ITEMS',
-                    style: GoogleFonts.outfit(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 10.5,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ),
-          // Category Selector
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            physics: const BouncingScrollPhysics(),
-            child: Row(
-              children: ['All Gear', 'Equipment', 'Kits', 'Footwear'].map((cat) {
-                final isSel = _selectedCategory == cat;
-                return GestureDetector(
-                  onTap: () => setState(() => _selectedCategory = cat),
-                  child: Container(
-                    margin: const EdgeInsets.only(right: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: isSel ? AppColors.primary : const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: isSel ? AppColors.primary : const Color(0xFFE2E8F0),
-                      ),
-                    ),
-                    child: Text(
-                      cat,
-                      style: GoogleFonts.outfit(
-                        fontSize: 12,
-                        fontWeight: isSel ? FontWeight.w800 : FontWeight.w600,
-                        color: isSel ? Colors.white : const Color(0xFF0F172A),
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-          Expanded(
-            child: ListView.separated(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(20, 6, 20, 24),
-              itemCount: filtered.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 10),
-              itemBuilder: (ctx, idx) {
-                final item = filtered[idx];
-                return Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFFF1F5F9)),
-                        ),
-                        child: Icon(item['icon'] as IconData, color: const Color(0xFF0F172A), size: 24),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item['title'],
-                              style: GoogleFonts.outfit(
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFF0F172A),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Text(
-                                  item['price'],
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 14.5,
-                                    fontWeight: FontWeight.w900,
-                                    color: AppColors.primary,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  item['original'],
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 11.5,
-                                    decoration: TextDecoration.lineThrough,
-                                    color: const Color(0xFF94A3B8),
-                                  ),
-                                ),
-                                const Spacer(),
-                                const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 14),
-                                Text(
-                                  ' ${item['rating']}',
-                                  style: GoogleFonts.outfit(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    color: const Color(0xFF64748B),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      BouncingTap(
-                        onTap: () {
-                          setState(() => _cartCount++);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              duration: const Duration(seconds: 1),
-                              backgroundColor: AppColors.primary,
-                              behavior: SnackBarBehavior.floating,
-                              content: Text(
-                                'Added "${item['title']}" to bag',
-                                style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
-                              ),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            'ADD',
-                            style: GoogleFonts.outfit(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
+          const Expanded(
+            child: _FeatureComingSoonView(
+              icon: Icons.storefront_rounded,
+              title: 'WorldSports Pro Store',
+              categoryTag: 'Coming Soon • Q1 2027',
+              description:
+                  'We are currently onboarding certified sporting goods manufacturers and official equipment distributors. Zero fake listings — only 100% verified tournament equipment directly for athletes and clubs.',
+              highlights: [
+                {
+                  'icon': Icons.sports_cricket_rounded,
+                  'title': 'Certified Match Bats & Leather Balls',
+                  'subtitle':
+                      'Grade 1 English Willow & tournament-regulation balls directly from official brands.',
+                },
+                {
+                  'icon': Icons.checkroom_rounded,
+                  'title': 'Custom Squad & Club Match Kits',
+                  'subtitle':
+                      'Fully sublimated jerseys with custom squad numbers and sponsor badges.',
+                },
+                {
+                  'icon': Icons.directions_run_rounded,
+                  'title': 'Turf, Grass & Court Performance Footwear',
+                  'subtitle':
+                      'High-traction spikes and court shoes engineered for competitive agility.',
+                },
+                {
+                  'icon': Icons.local_shipping_rounded,
+                  'title': 'Direct Pan-India Arena Doorstep Delivery',
+                  'subtitle':
+                      'Fast verified delivery straight to your club ground or home academy.',
+                },
+              ],
             ),
           ),
         ],
@@ -1202,66 +1118,16 @@ class _WorldSportsStoreBottomSheetState extends State<_WorldSportsStoreBottomShe
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// 4. LEADERBOARD (Monochrome + Ground Green Accents)
+// 4. LEADERBOARD (Coming Soon Experience • Unlocks with Real Matches)
 // ═════════════════════════════════════════════════════════════════════════════
 
-class _LeaderboardBottomSheet extends StatefulWidget {
+class _LeaderboardBottomSheet extends StatelessWidget {
   const _LeaderboardBottomSheet();
-
-  @override
-  State<_LeaderboardBottomSheet> createState() => _LeaderboardBottomSheetState();
-}
-
-class _LeaderboardBottomSheetState extends State<_LeaderboardBottomSheet> {
-  String _scope = 'Division 1 Pro';
-
-  final List<Map<String, dynamic>> _rankings = const [
-    {
-      'rank': 1,
-      'name': 'Arjun Sharma',
-      'team': 'Mumbai Mavericks',
-      'points': 2840,
-      'winRate': '78%',
-      'sport': 'Cricket / Football',
-    },
-    {
-      'rank': 2,
-      'name': 'Rohit Verma',
-      'team': 'Delhi Dynamos',
-      'points': 2710,
-      'winRate': '74%',
-      'sport': 'Cricket',
-    },
-    {
-      'rank': 3,
-      'name': 'Kiran Mukherjee',
-      'team': 'Bengaluru FC Stars',
-      'points': 2650,
-      'winRate': '71%',
-      'sport': 'Football',
-    },
-    {
-      'rank': 4,
-      'name': 'Priya Menon',
-      'team': 'Karnataka Aces',
-      'points': 2520,
-      'winRate': '69%',
-      'sport': 'Tennis',
-    },
-    {
-      'rank': 5,
-      'name': 'Farhan Khan',
-      'team': 'Hyderabad Hawks',
-      'points': 2480,
-      'winRate': '67%',
-      'sport': 'Basketball',
-    },
-  ];
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: MediaQuery.of(context).size.height * 0.9,
+      height: MediaQuery.of(context).size.height * 0.88,
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -1274,154 +1140,221 @@ class _LeaderboardBottomSheetState extends State<_LeaderboardBottomSheet> {
             subtitle: 'Rankings, rating index & matchday standings',
             icon: Icons.leaderboard_outlined,
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            child: Row(
-              children: ['Division 1 Pro', 'National', 'Top Scorers'].map((s) {
-                final isSel = _scope == s;
-                return Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(() => _scope = s),
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 3),
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      decoration: BoxDecoration(
-                        color: isSel ? AppColors.primary : const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: isSel ? AppColors.primary : const Color(0xFFE2E8F0),
-                        ),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        s,
-                        style: GoogleFonts.outfit(
-                          fontSize: 11,
-                          fontWeight: isSel ? FontWeight.w800 : FontWeight.w600,
-                          color: isSel ? Colors.white : const Color(0xFF0F172A),
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
+          const Expanded(
+            child: _FeatureComingSoonView(
+              icon: Icons.emoji_events_outlined,
+              title: 'Official Season Leaderboard',
+              categoryTag: 'Coming Soon • Season 1',
+              description:
+                  'Global and division leaderboards are calculated dynamically from verified tournament scorecards. Standings and MVP tables will unlock automatically as official matches are logged on WorldSports.',
+              highlights: [
+                {
+                  'icon': Icons.star_rounded,
+                  'title': 'Dynamic Athlete Rating Index',
+                  'subtitle':
+                      'Real-time multi-sport skill ratings powered by algorithmic match performance.',
+                },
+                {
+                  'icon': Icons.shield_rounded,
+                  'title': 'Division & Tournament Standings',
+                  'subtitle':
+                      'Points tables, net run rates, goal differentials, and playoff brackets.',
+                },
+                {
+                  'icon': Icons.military_tech_rounded,
+                  'title': 'Season Awards & Fair Play Badges',
+                  'subtitle':
+                      'Top run scorers, golden boots, best referee ratings, and MVP accolades.',
+                },
+              ],
             ),
           ),
-          const SizedBox(height: 6),
-          // Top 3 Podium
-          _buildPodiumView(),
-          const Divider(height: 16, indent: 20, endIndent: 20, color: Color(0xFFF1F5F9)),
-          // Remaining List
+        ],
+      ),
+    );
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// REUSABLE FEATURE COMING SOON VIEW (Zero Mock Data Policy)
+// ═════════════════════════════════════════════════════════════════════════════
+
+class _FeatureComingSoonView extends StatefulWidget {
+  final IconData icon;
+  final String title;
+  final String categoryTag;
+  final String description;
+  final List<Map<String, dynamic>> highlights;
+
+  const _FeatureComingSoonView({
+    required this.icon,
+    required this.title,
+    required this.categoryTag,
+    required this.description,
+    required this.highlights,
+  });
+
+  @override
+  State<_FeatureComingSoonView> createState() => _FeatureComingSoonViewState();
+}
+
+class _FeatureComingSoonViewState extends State<_FeatureComingSoonView> {
+  bool _isNotified = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Banner Container
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.primary.withValues(alpha: 0.08),
+                  const Color(0xFFF8FAFC),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.2),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.15),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Icon(widget.icon, color: AppColors.primary, size: 26),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          widget.categoryTag.toUpperCase(),
+                          style: GoogleFonts.outfit(
+                            color: Colors.white,
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        widget.title,
+                        style: GoogleFonts.outfit(
+                          fontSize: 15.5,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF0F172A),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            widget.description,
+            style: GoogleFonts.outfit(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF475569),
+              height: 1.45,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'WHAT TO EXPECT',
+            style: GoogleFonts.outfit(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF64748B),
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: 8),
           Expanded(
             child: ListView.separated(
               physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-              itemCount: _rankings.length,
+              itemCount: widget.highlights.length,
               separatorBuilder: (_, _) => const SizedBox(height: 8),
-              itemBuilder: (ctx, idx) {
-                final p = _rankings[idx];
-                final isUser = p['name'] == 'Arjun Sharma';
+              itemBuilder: (ctx, i) {
+                final h = widget.highlights[i];
                 return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: isUser ? AppColors.primary.withValues(alpha: 0.05) : Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: isUser ? AppColors.primary : const Color(0xFFE2E8F0),
-                      width: isUser ? 1.5 : 1,
-                    ),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
                   ),
                   child: Row(
                     children: [
                       Container(
-                        width: 26,
-                        height: 26,
+                        width: 36,
+                        height: 36,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(6),
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          '#${p['rank']}',
-                          style: GoogleFonts.outfit(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 11.5,
-                            color: const Color(0xFF0F172A),
-                          ),
+                        child: Icon(
+                          h['icon'] as IconData,
+                          color: AppColors.primary,
+                          size: 20,
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      UserAvatar(name: p['name'], radius: 16),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    p['name'],
-                                    style: GoogleFonts.outfit(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 13.5,
-                                      color: const Color(0xFF0F172A),
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                if (isUser) ...[
-                                  const SizedBox(width: 4),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primary,
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      'YOU',
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 8,
-                                        fontWeight: FontWeight.w900,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
                             Text(
-                              '${p['team']} • ${p['sport']}',
+                              h['title'] as String,
+                              style: GoogleFonts.outfit(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF0F172A),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              h['subtitle'] as String,
                               style: GoogleFonts.outfit(
                                 fontSize: 11,
-                                fontWeight: FontWeight.w500,
                                 color: const Color(0xFF64748B),
                               ),
                             ),
                           ],
                         ),
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            '${p['points']} pts',
-                            style: GoogleFonts.outfit(
-                              fontWeight: FontWeight.w900,
-                              fontSize: 13.5,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                          Text(
-                            '${p['winRate']} win rate',
-                            style: GoogleFonts.outfit(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF64748B),
-                            ),
-                          ),
-                        ],
                       ),
                     ],
                   ),
@@ -1429,107 +1362,64 @@ class _LeaderboardBottomSheetState extends State<_LeaderboardBottomSheet> {
               },
             ),
           ),
+          const SizedBox(height: 10),
+          BouncingTap(
+            onTap: () {
+              setState(() => _isNotified = true);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  backgroundColor: AppColors.primary,
+                  content: Text(
+                    'You are registered for notifications when  goes live!',
+                    style: GoogleFonts.outfit(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              );
+            },
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 13),
+              decoration: BoxDecoration(
+                color: _isNotified
+                    ? const Color(0xFF059669)
+                    : AppColors.primary,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              alignment: Alignment.center,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    _isNotified
+                        ? Icons.check_circle_rounded
+                        : Icons.notifications_active_rounded,
+                    color: Colors.white,
+                    size: 17,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _isNotified
+                        ? 'REGISTERED FOR LAUNCH NOTIFICATION'
+                        : 'NOTIFY ME WHEN LIVE',
+                    style: GoogleFonts.outfit(
+                      color: Colors.white,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.6,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
-    );
-  }
-
-  Widget _buildPodiumView() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Expanded(
-            child: _buildPodiumColumn(
-              rank: 2,
-              name: 'Rohit V.',
-              pts: '2,710',
-              height: 60,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _buildPodiumColumn(
-              rank: 1,
-              name: 'Arjun S.',
-              pts: '2,840',
-              height: 80,
-              isFirst: true,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _buildPodiumColumn(
-              rank: 3,
-              name: 'Kiran M.',
-              pts: '2,650',
-              height: 50,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPodiumColumn({
-    required int rank,
-    required String name,
-    required String pts,
-    required double height,
-    bool isFirst = false,
-  }) {
-    return Column(
-      children: [
-        UserAvatar(name: name, radius: isFirst ? 18 : 15, showProRing: isFirst),
-        const SizedBox(height: 4),
-        Text(
-          name,
-          style: GoogleFonts.outfit(
-            fontWeight: FontWeight.w700,
-            fontSize: 11,
-            color: const Color(0xFF0F172A),
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        Text(
-          pts,
-          style: GoogleFonts.outfit(
-            fontWeight: FontWeight.w800,
-            fontSize: 10.5,
-            color: AppColors.primary,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Container(
-          height: height,
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: isFirst ? AppColors.primary.withValues(alpha: 0.12) : const Color(0xFFF1F5F9),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
-            border: Border.all(
-              color: isFirst ? AppColors.primary.withValues(alpha: 0.3) : const Color(0xFFE2E8F0),
-            ),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            '#$rank',
-            style: GoogleFonts.outfit(
-              fontWeight: FontWeight.w900,
-              fontSize: 16,
-              color: isFirst ? AppColors.primary : const Color(0xFF64748B),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }
-
-// ═════════════════════════════════════════════════════════════════════════════
-// 5. CLUBS (Clean Cards with Sport-Specific Badges)
-// ═════════════════════════════════════════════════════════════════════════════
 
 class _ClubsDirectoryBottomSheet extends StatelessWidget {
   const _ClubsDirectoryBottomSheet();
@@ -1563,7 +1453,10 @@ class _ClubsDirectoryBottomSheet extends StatelessWidget {
                 );
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
@@ -1571,7 +1464,11 @@ class _ClubsDirectoryBottomSheet extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.search_rounded, color: AppColors.primary, size: 15),
+                    const Icon(
+                      Icons.search_rounded,
+                      color: AppColors.primary,
+                      size: 15,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       'SEARCH',
@@ -1612,9 +1509,15 @@ class _ClubsDirectoryBottomSheet extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: const Color(0xFFF8FAFC),
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: const Color(0xFFF1F5F9)),
+                              border: Border.all(
+                                color: const Color(0xFFF1F5F9),
+                              ),
                             ),
-                            child: const Icon(Icons.shield_outlined, color: Color(0xFF0F172A), size: 22),
+                            child: const Icon(
+                              Icons.shield_outlined,
+                              color: Color(0xFF0F172A),
+                              size: 22,
+                            ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -1636,7 +1539,11 @@ class _ClubsDirectoryBottomSheet extends StatelessWidget {
                                       ),
                                     ),
                                     const SizedBox(width: 4),
-                                    const Icon(Icons.verified_rounded, color: AppColors.primary, size: 15),
+                                    const Icon(
+                                      Icons.verified_rounded,
+                                      color: AppColors.primary,
+                                      size: 15,
+                                    ),
                                   ],
                                 ),
                                 Text(
@@ -1684,7 +1591,10 @@ class _ClubsDirectoryBottomSheet extends StatelessWidget {
                                   break;
                               }
                               return Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 7,
+                                  vertical: 2,
+                                ),
                                 decoration: BoxDecoration(
                                   color: sColor.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(4),
@@ -1705,11 +1615,16 @@ class _ClubsDirectoryBottomSheet extends StatelessWidget {
                             onTap: () {
                               Navigator.pop(context);
                               Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => const TeamsScreen()),
+                                MaterialPageRoute(
+                                  builder: (_) => const TeamsScreen(),
+                                ),
                               );
                             },
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
                               decoration: BoxDecoration(
                                 color: AppColors.primary,
                                 borderRadius: BorderRadius.circular(6),
@@ -1794,7 +1709,8 @@ class _AssociationsBottomSheet extends StatelessWidget {
           _buildDragHandle(),
           _buildSheetHeader(
             title: 'Associations',
-            subtitle: 'Sanctioned governing councils, state federations & licenses',
+            subtitle:
+                'Sanctioned governing councils, state federations & licenses',
             icon: Icons.account_balance_outlined,
             trailing: BouncingTap(
               onTap: () {
@@ -1808,7 +1724,10 @@ class _AssociationsBottomSheet extends StatelessWidget {
                 );
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
@@ -1816,7 +1735,11 @@ class _AssociationsBottomSheet extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.search_rounded, color: AppColors.primary, size: 15),
+                    const Icon(
+                      Icons.search_rounded,
+                      color: AppColors.primary,
+                      size: 15,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       'SEARCH',
@@ -1857,9 +1780,15 @@ class _AssociationsBottomSheet extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: const Color(0xFFF8FAFC),
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: const Color(0xFFF1F5F9)),
+                              border: Border.all(
+                                color: const Color(0xFFF1F5F9),
+                              ),
                             ),
-                            child: Icon(a['icon'] as IconData, color: const Color(0xFF0F172A), size: 20),
+                            child: Icon(
+                              a['icon'] as IconData,
+                              color: const Color(0xFF0F172A),
+                              size: 20,
+                            ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -1888,7 +1817,10 @@ class _AssociationsBottomSheet extends StatelessWidget {
                             ),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.primary.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(4),
@@ -1906,7 +1838,10 @@ class _AssociationsBottomSheet extends StatelessWidget {
                       ),
                       const SizedBox(height: 10),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFF8FAFC),
                           borderRadius: BorderRadius.circular(8),
@@ -1956,9 +1891,14 @@ class _AssociationsBottomSheet extends StatelessWidget {
                           const Spacer(),
                           OutlinedButton(
                             style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 5,
+                              ),
                               side: const BorderSide(color: Color(0xFFCBD5E1)),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(6),
+                              ),
                             ),
                             onPressed: () {
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -1967,7 +1907,9 @@ class _AssociationsBottomSheet extends StatelessWidget {
                                   behavior: SnackBarBehavior.floating,
                                   content: Text(
                                     '${a['name']} bylaws handbook opened',
-                                    style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
+                                    style: GoogleFonts.outfit(
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
                                 ),
                               );
@@ -2068,7 +2010,10 @@ class _GroundsDirectoryBottomSheet extends StatelessWidget {
                 );
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
@@ -2076,7 +2021,11 @@ class _GroundsDirectoryBottomSheet extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.search_rounded, color: AppColors.primary, size: 15),
+                    const Icon(
+                      Icons.search_rounded,
+                      color: AppColors.primary,
+                      size: 15,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       'SEARCH',
@@ -2117,9 +2066,15 @@ class _GroundsDirectoryBottomSheet extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: const Color(0xFFF8FAFC),
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: const Color(0xFFF1F5F9)),
+                              border: Border.all(
+                                color: const Color(0xFFF1F5F9),
+                              ),
                             ),
-                            child: Icon(g['icon'] as IconData, color: const Color(0xFF0F172A), size: 22),
+                            child: Icon(
+                              g['icon'] as IconData,
+                              color: const Color(0xFF0F172A),
+                              size: 22,
+                            ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -2141,7 +2096,11 @@ class _GroundsDirectoryBottomSheet extends StatelessWidget {
                                       ),
                                     ),
                                     const SizedBox(width: 4),
-                                    const Icon(Icons.star_rounded, color: Color(0xFFF59E0B), size: 14),
+                                    const Icon(
+                                      Icons.star_rounded,
+                                      color: Color(0xFFF59E0B),
+                                      size: 14,
+                                    ),
                                     Text(
                                       ' ${g['rating']}',
                                       style: GoogleFonts.outfit(
@@ -2169,7 +2128,10 @@ class _GroundsDirectoryBottomSheet extends StatelessWidget {
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: const Color(0xFFF1F5F9),
                               borderRadius: BorderRadius.circular(4),
@@ -2186,7 +2148,10 @@ class _GroundsDirectoryBottomSheet extends StatelessWidget {
                           if (g['floodlights'] == true) ...[
                             const SizedBox(width: 6),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 7,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
                                 color: AppColors.primary.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(4),
@@ -2223,13 +2188,18 @@ class _GroundsDirectoryBottomSheet extends StatelessWidget {
                                   behavior: SnackBarBehavior.floating,
                                   content: Text(
                                     'Slot booked at ${g['name']}!',
-                                    style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
+                                    style: GoogleFonts.outfit(
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
                                 ),
                               );
                             },
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 7,
+                              ),
                               decoration: BoxDecoration(
                                 color: AppColors.primary,
                                 borderRadius: BorderRadius.circular(6),
@@ -2300,15 +2270,25 @@ class _HelpSupportBottomSheet extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(Icons.headset_mic_outlined, color: AppColors.primary, size: 22),
+                            const Icon(
+                              Icons.headset_mic_outlined,
+                              color: AppColors.primary,
+                              size: 22,
+                            ),
                             const SizedBox(height: 6),
                             Text(
                               'Live Support',
-                              style: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 13),
+                              style: GoogleFonts.outfit(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
                             ),
                             Text(
                               'Instant chat desk',
-                              style: GoogleFonts.outfit(fontSize: 11, color: const Color(0xFF64748B)),
+                              style: GoogleFonts.outfit(
+                                fontSize: 11,
+                                color: const Color(0xFF64748B),
+                              ),
                             ),
                           ],
                         ),
@@ -2326,15 +2306,25 @@ class _HelpSupportBottomSheet extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(Icons.menu_book_outlined, color: AppColors.primary, size: 22),
+                            const Icon(
+                              Icons.menu_book_outlined,
+                              color: AppColors.primary,
+                              size: 22,
+                            ),
                             const SizedBox(height: 6),
                             Text(
                               'Rulebooks',
-                              style: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 13),
+                              style: GoogleFonts.outfit(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
                             ),
                             Text(
                               '4 Sports Standards',
-                              style: GoogleFonts.outfit(fontSize: 11, color: const Color(0xFF64748B)),
+                              style: GoogleFonts.outfit(
+                                fontSize: 11,
+                                color: const Color(0xFF64748B),
+                              ),
                             ),
                           ],
                         ),
@@ -2359,7 +2349,8 @@ class _HelpSupportBottomSheet extends StatelessWidget {
                       'Tap "Start Match" in the sidebar, choose your sport, configure squads, overs, toss, and you enter the live scoring console.',
                 ),
                 _buildFaqTile(
-                  question: 'Can I add custom players or international rosters?',
+                  question:
+                      'Can I add custom players or international rosters?',
                   answer:
                       'Yes, you can choose from the built-in real athletes catalog or create squad members with custom jersey numbers and roles.',
                 ),
@@ -2369,7 +2360,8 @@ class _HelpSupportBottomSheet extends StatelessWidget {
                       'Open Match Settings during a live game to adjust total overs or declare innings. Target calculations will automatically re-calibrate.',
                 ),
                 _buildFaqTile(
-                  question: 'How do I register my club or host a sanctioned tournament?',
+                  question:
+                      'How do I register my club or host a sanctioned tournament?',
                   answer:
                       'Tap "Add a Tournament / Series" from the sidebar to publish a cup and invite teams, or browse "Clubs" to affiliate your roster.',
                 ),
@@ -2383,7 +2375,11 @@ class _HelpSupportBottomSheet extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.mail_outline_rounded, color: AppColors.primary, size: 20),
+                      const Icon(
+                        Icons.mail_outline_rounded,
+                        color: AppColors.primary,
+                        size: 20,
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Column(
@@ -2419,7 +2415,10 @@ class _HelpSupportBottomSheet extends StatelessWidget {
     );
   }
 
-  static Widget _buildFaqTile({required String question, required String answer}) {
+  static Widget _buildFaqTile({
+    required String question,
+    required String answer,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Container(
@@ -2510,7 +2509,10 @@ class _ShareOptionsBottomSheet extends StatelessWidget {
               ),
               const SizedBox(height: 18),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF8FAFC),
                   borderRadius: BorderRadius.circular(10),
@@ -2518,7 +2520,11 @@ class _ShareOptionsBottomSheet extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.link_rounded, color: Color(0xFF64748B), size: 18),
+                    const Icon(
+                      Icons.link_rounded,
+                      color: Color(0xFF64748B),
+                      size: 18,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -2539,11 +2545,16 @@ class _ShareOptionsBottomSheet extends StatelessWidget {
                             behavior: SnackBarBehavior.floating,
                             content: Row(
                               children: [
-                                const Icon(Icons.check_circle_rounded, color: Colors.white),
+                                const Icon(
+                                  Icons.check_circle_rounded,
+                                  color: Colors.white,
+                                ),
                                 const SizedBox(width: 8),
                                 Text(
                                   'Invite link copied to clipboard!',
-                                  style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
+                                  style: GoogleFonts.outfit(
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
                               ],
                             ),
@@ -2551,7 +2562,10 @@ class _ShareOptionsBottomSheet extends StatelessWidget {
                         );
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.primary,
                           borderRadius: BorderRadius.circular(6),
@@ -2701,7 +2715,11 @@ Widget _buildFormLabel(String label) {
   );
 }
 
-Widget _buildInputField(TextEditingController ctrl, String hint, IconData icon) {
+Widget _buildInputField(
+  TextEditingController ctrl,
+  String hint,
+  IconData icon,
+) {
   return Container(
     decoration: BoxDecoration(
       color: const Color(0xFFF8FAFC),
@@ -2717,10 +2735,16 @@ Widget _buildInputField(TextEditingController ctrl, String hint, IconData icon) 
       ),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: GoogleFonts.outfit(color: const Color(0xFF94A3B8), fontSize: 13),
+        hintStyle: GoogleFonts.outfit(
+          color: const Color(0xFF94A3B8),
+          fontSize: 13,
+        ),
         prefixIcon: Icon(icon, color: const Color(0xFF64748B), size: 18),
         border: InputBorder.none,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 12,
+        ),
       ),
     ),
   );

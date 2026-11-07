@@ -264,7 +264,42 @@ void main() {
 
     testWidgets('LiveScoringScreen displays Stats tab with Worm and Manhattan graphs for cricket', (tester) async {
       final appState = AppState();
-      final cricketMatch = appState.liveMatches.firstWhere((m) => m.sport == SportType.cricket);
+      final cricketMatch = MatchModel(
+        id: 'cricket_live_analytics',
+        sport: SportType.cricket,
+        team1Id: 't1',
+        team2Id: 't2',
+        team1Name: 'Mumbai Mavericks',
+        team2Name: 'Delhi Dynamos',
+        team1Short: 'MUM',
+        team2Short: 'DEL',
+        dateTime: DateTime.now(),
+        venue: 'Wankhede Arena',
+        creatorId: 'u001',
+        status: MatchStatus.live,
+        scoreData: const {
+          'team1_score': '187/4',
+          'team1_overs': '20.0',
+          'team2_score': '165/8',
+          'team2_overs': '18.4',
+          'overs_limit': 20,
+          'innings1': {
+            'runs': 45,
+            'wickets': 1,
+            'balls': 30,
+            'overs': '5.0',
+          },
+        },
+        team1Players: const [
+          MatchPlayer(id: 'c1', name: 'Rohit Sharma', jerseyNumber: 45, role: 'Opening Batsman'),
+          MatchPlayer(id: 'c2', name: 'Virat Kohli', jerseyNumber: 18, role: 'Top-Order Batsman'),
+        ],
+        team2Players: const [
+          MatchPlayer(id: 'c3', name: 'Jasprit Bumrah', jerseyNumber: 93, role: 'Fast Bowler'),
+          MatchPlayer(id: 'c4', name: 'Hardik Pandya', jerseyNumber: 33, role: 'All-Rounder'),
+        ],
+      );
+      appState.addMatch(cricketMatch);
 
       await tester.pumpWidget(
         ChangeNotifierProvider<AppState>.value(
@@ -283,7 +318,7 @@ void main() {
       expect(find.text('Stats'), findsOneWidget);
 
       // Tap Stats Tab
-      await tester.tap(find.text('Stats'));
+      await tester.tap(find.widgetWithText(Tab, 'Stats'));
       await tester.pumpAndSettle();
 
       // Verify all cricket CricHeroes/Stumps graphs are present

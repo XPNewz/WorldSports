@@ -323,6 +323,7 @@ class GradientButton extends StatelessWidget {
       child: Container(
         width: width,
         height: height,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
           gradient: g,
           borderRadius: BorderRadius.circular(16),
@@ -330,18 +331,23 @@ class GradientButton extends StatelessWidget {
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             if (icon != null) ...[
               Icon(icon, color: textColor ?? Colors.white, size: 20),
               const SizedBox(width: 8),
             ],
-            Text(
-              label,
-              style: GoogleFonts.outfit(
-                color: textColor ?? Colors.white,
-                fontSize: 15.5,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.4,
+            Flexible(
+              child: Text(
+                label,
+                style: GoogleFonts.outfit(
+                  color: textColor ?? Colors.white,
+                  fontSize: 15.5,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.4,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
@@ -421,36 +427,45 @@ class SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: CrossAxisAlignment.end,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Row(
-          children: [
-            if (icon != null) ...[
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: (accentColor ?? AppColors.primary).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
+        Expanded(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (icon != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: (accentColor ?? AppColors.primary).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(icon, color: accentColor ?? AppColors.primary, size: 16),
                 ),
-                child: Icon(icon, color: accentColor ?? AppColors.primary, size: 16),
+                const SizedBox(width: 8),
+              ],
+              Flexible(
+                child: Text(
+                  title,
+                  style: GoogleFonts.outfit(
+                    color: AppColors.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              const SizedBox(width: 8),
             ],
-            Text(
-              title,
-              style: GoogleFonts.outfit(
-                color: AppColors.textPrimary,
-                fontSize: 18,
-                fontWeight: FontWeight.w900,
-                letterSpacing: -0.5,
-              ),
-            ),
-          ],
+          ),
         ),
-        if (actionLabel != null)
+        if (actionLabel != null) ...[
+          const SizedBox(width: 10),
           BouncingTap(
             onTap: onAction ?? () {},
             child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   actionLabel!,
@@ -469,6 +484,7 @@ class SectionHeader extends StatelessWidget {
               ],
             ),
           ),
+        ],
       ],
     );
   }
@@ -685,36 +701,48 @@ class MomentumBar extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                '$team1Label $t1Percent%',
-                style: GoogleFonts.outfit(
-                  color: team1Color,
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w800,
+              Expanded(
+                child: Text(
+                  '$team1Label $t1Percent%',
+                  style: GoogleFonts.outfit(
+                    color: team1Color,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w800,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceLight,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  'MATCH CONTROL',
-                  style: GoogleFonts.outfit(
-                    color: AppColors.textMuted,
-                    fontSize: 9.5,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.6,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceLight,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    'MATCH CONTROL',
+                    style: GoogleFonts.outfit(
+                      color: AppColors.textMuted,
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.6,
+                    ),
                   ),
                 ),
               ),
-              Text(
-                '$t2Percent% $team2Label',
-                style: GoogleFonts.outfit(
-                  color: team2Color,
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w800,
+              Expanded(
+                child: Text(
+                  '$t2Percent% $team2Label',
+                  textAlign: TextAlign.end,
+                  style: GoogleFonts.outfit(
+                    color: team2Color,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w800,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],

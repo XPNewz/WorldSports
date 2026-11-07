@@ -16,43 +16,83 @@ void main() {
   group('Algorithm 1: Damerau-Levenshtein & Jaro-Winkler Distance', () {
     test('Damerau-Levenshtein correctly handles transpositions', () {
       // Classic transposition error: "rohti" -> "rohit"
-      final distance = SearchStringDistance.damerauLevenshtein('rohti', 'rohit');
-      expect(distance, equals(1), reason: 'Adjacent transposition should cost 1 edit');
+      final distance = SearchStringDistance.damerauLevenshtein(
+        'rohti',
+        'rohit',
+      );
+      expect(
+        distance,
+        equals(1),
+        reason: 'Adjacent transposition should cost 1 edit',
+      );
 
       // "wankede" vs "wankhede" (1 deletion)
-      expect(SearchStringDistance.damerauLevenshtein('wankede', 'wankhede'), equals(1));
+      expect(
+        SearchStringDistance.damerauLevenshtein('wankede', 'wankhede'),
+        equals(1),
+      );
 
       // Identical strings have 0 distance
-      expect(SearchStringDistance.damerauLevenshtein('dhoni', 'dhoni'), equals(0));
+      expect(
+        SearchStringDistance.damerauLevenshtein('dhoni', 'dhoni'),
+        equals(0),
+      );
     });
 
     test('Normalized Levenshtein similarity is in range [0.0, 1.0]', () {
-      final simExact = SearchStringDistance.normalizedLevenshtein('virat', 'virat');
+      final simExact = SearchStringDistance.normalizedLevenshtein(
+        'virat',
+        'virat',
+      );
       expect(simExact, equals(1.0));
 
-      final simClose = SearchStringDistance.normalizedLevenshtein('virat', 'virak');
+      final simClose = SearchStringDistance.normalizedLevenshtein(
+        'virat',
+        'virak',
+      );
       expect(simClose, greaterThanOrEqualTo(0.8));
 
-      final simFar = SearchStringDistance.normalizedLevenshtein('tennis', 'xyz123');
+      final simFar = SearchStringDistance.normalizedLevenshtein(
+        'tennis',
+        'xyz123',
+      );
       expect(simFar, lessThan(0.3));
     });
 
     test('Jaro-Winkler favors common prefixes in athlete names', () {
-      final jwPrefixMatch = SearchStringDistance.jaroWinkler('virat', 'viratkohli');
-      final jwNonPrefixMatch = SearchStringDistance.jaroWinkler('virat', 'xyzvirat');
+      final jwPrefixMatch = SearchStringDistance.jaroWinkler(
+        'virat',
+        'viratkohli',
+      );
+      final jwNonPrefixMatch = SearchStringDistance.jaroWinkler(
+        'virat',
+        'xyzvirat',
+      );
       expect(jwPrefixMatch, greaterThan(jwNonPrefixMatch));
     });
 
-    test('Token fuzzy match identifies target tokens inside multi-word titles', () {
-      final score = SearchStringDistance.tokenFuzzyMatch('Wankhede Arena & Ground', 'wankede');
-      expect(score, greaterThanOrEqualTo(0.75));
-    });
+    test(
+      'Token fuzzy match identifies target tokens inside multi-word titles',
+      () {
+        final score = SearchStringDistance.tokenFuzzyMatch(
+          'Wankhede Arena & Ground',
+          'wankede',
+        );
+        expect(score, greaterThanOrEqualTo(0.75));
+      },
+    );
   });
 
   group('Algorithm 2: Phonetic Algorithms (Metaphone & Soundex)', () {
     test('Strips diacritics and accents correctly', () {
-      expect(SearchPhonetics.normalizeAccents('Luka Dončić'), equals('Luka Doncic'));
-      expect(SearchPhonetics.normalizeAccents('Nikola Jokić'), equals('Nikola Jokic'));
+      expect(
+        SearchPhonetics.normalizeAccents('Luka Dončić'),
+        equals('Luka Doncic'),
+      );
+      expect(
+        SearchPhonetics.normalizeAccents('Nikola Jokić'),
+        equals('Nikola Jokic'),
+      );
     });
 
     test('Soundex generates matching phonetic codes for name variations', () {
@@ -62,7 +102,10 @@ void main() {
       expect(code1, equals(code2));
 
       // "Bumra" vs "Bumrah"
-      expect(SearchPhonetics.soundex('Bumra'), equals(SearchPhonetics.soundex('Bumrah')));
+      expect(
+        SearchPhonetics.soundex('Bumra'),
+        equals(SearchPhonetics.soundex('Bumrah')),
+      );
     });
 
     test('Sports Metaphone accurately normalizes phonetic consonants', () {
@@ -75,41 +118,48 @@ void main() {
       expect(metaBumra, equals(metaBumrah));
     });
 
-    test('Phonetic similarity yields high confidence for phonetic variants', () {
-      final sim = SearchPhonetics.phoneticSimilarity('Chhetri', 'Chetri');
-      expect(sim, greaterThanOrEqualTo(0.85));
-    });
+    test(
+      'Phonetic similarity yields high confidence for phonetic variants',
+      () {
+        final sim = SearchPhonetics.phoneticSimilarity('Chhetri', 'Chetri');
+        expect(sim, greaterThanOrEqualTo(0.85));
+      },
+    );
   });
 
   group('Algorithm 3: BM25 Probabilistic Ranking', () {
-    test('Calculates BM25 scores with term frequency saturation and multi-field weights', () {
-      final index = BM25SearchIndex();
+    test(
+      'Calculates BM25 scores with term frequency saturation and multi-field weights',
+      () {
+        final index = BM25SearchIndex();
 
-      index.indexDocument(
-        IndexedDocument.fromFields(
-          id: 'doc1',
-          title: 'Wankhede Arena Cricket Ground',
-          tags: ['cricket', 'pitch', 'stadium'],
-          description: 'Premier floodlit cricket venue in Mumbai with red soil pitch',
-        ),
-      );
+        index.indexDocument(
+          IndexedDocument.fromFields(
+            id: 'doc1',
+            title: 'Wankhede Arena Cricket Ground',
+            tags: ['cricket', 'pitch', 'stadium'],
+            description:
+                'Premier floodlit cricket venue in Mumbai with red soil pitch',
+          ),
+        );
 
-      index.indexDocument(
-        IndexedDocument.fromFields(
-          id: 'doc2',
-          title: 'DLTA Tennis Arena Complex',
-          tags: ['tennis', 'court'],
-          description: 'Synthetic hard court tennis facility',
-        ),
-      );
+        index.indexDocument(
+          IndexedDocument.fromFields(
+            id: 'doc2',
+            title: 'DLTA Tennis Arena Complex',
+            tags: ['tennis', 'court'],
+            description: 'Synthetic hard court tennis facility',
+          ),
+        );
 
-      index.commit();
+        index.commit();
 
-      final scores = index.scoreQuery(['cricket']);
-      expect(scores.containsKey('doc1'), isTrue);
-      expect(scores['doc1']!, greaterThan(0.0));
-      expect(scores.containsKey('doc2'), isFalse);
-    });
+        final scores = index.scoreQuery(['cricket']);
+        expect(scores.containsKey('doc1'), isTrue);
+        expect(scores['doc1']!, greaterThan(0.0));
+        expect(scores.containsKey('doc2'), isFalse);
+      },
+    );
   });
 
   group('Algorithm 4: Frequency-Ranked Prefix Trie', () {
@@ -217,26 +267,30 @@ void main() {
       expect(matchFull.isExactMatch, isTrue);
     });
 
-    test('Extracts contextual snippet surrounding matched term with highlight bounds', () {
-      const item = SearchResultItem(
-        id: 'test_desc',
-        title: 'Central Arena',
-        subtitle: 'Multi-sport venue',
-        description: 'This is a long description detailing facilities including astroturf pitch and floodlights for evening games.',
-        category: SearchCategory.grounds,
-        location: 'Mumbai, India',
-        icon: Icons.stadium,
-      );
+    test(
+      'Extracts contextual snippet surrounding matched term with highlight bounds',
+      () {
+        const item = SearchResultItem(
+          id: 'test_desc',
+          title: 'Central Arena',
+          subtitle: 'Multi-sport venue',
+          description:
+              'This is a long description detailing facilities including astroturf pitch and floodlights for evening games.',
+          category: SearchCategory.grounds,
+          location: 'Mumbai, India',
+          icon: Icons.stadium,
+        );
 
-      final match = LearningToRankEngine.evaluate(
-        item: item,
-        rawQuery: 'astroturf',
-        queryTerms: ['astroturf'],
-      );
+        final match = LearningToRankEngine.evaluate(
+          item: item,
+          rawQuery: 'astroturf',
+          queryTerms: ['astroturf'],
+        );
 
-      expect(match.contextualSnippet.toLowerCase(), contains('astroturf'));
-      expect(match.snippetHighlightSpans, isNotEmpty);
-    });
+        expect(match.contextualSnippet.toLowerCase(), contains('astroturf'));
+        expect(match.snippetHighlightSpans, isNotEmpty);
+      },
+    );
   });
 
   group('SearchHistoryService Unit Tests', () {
@@ -270,7 +324,8 @@ void main() {
       expect(results, isNotEmpty);
       for (int i = 0; i < results.length - 1; i++) {
         final r1 = (results[i].metadata['rating'] as num?)?.toDouble() ?? 0.0;
-        final r2 = (results[i + 1].metadata['rating'] as num?)?.toDouble() ?? 0.0;
+        final r2 =
+            (results[i + 1].metadata['rating'] as num?)?.toDouble() ?? 0.0;
         expect(r1, greaterThanOrEqualTo(r2));
       }
     });
@@ -284,19 +339,19 @@ void main() {
 
       expect(results, isNotEmpty);
       for (int i = 0; i < results.length - 1; i++) {
-        final cmp = results[i].title.toLowerCase().compareTo(results[i + 1].title.toLowerCase());
+        final cmp = results[i].title.toLowerCase().compareTo(
+          results[i + 1].title.toLowerCase(),
+        );
         expect(cmp, lessThanOrEqualTo(0));
       }
     });
   });
 
   group('SearchScreen Algorithmic UI Widget Tests', () {
-    testWidgets('Displays predictive suggestions strip when user types', (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: SearchScreen(),
-        ),
-      );
+    testWidgets('Displays predictive suggestions strip when user types', (
+      tester,
+    ) async {
+      await tester.pumpWidget(const MaterialApp(home: SearchScreen()));
       await tester.pumpAndSettle();
 
       // Enter partial term "Wan"
@@ -315,12 +370,10 @@ void main() {
       expect(find.textContaining('Wankhede'), findsWidgets);
     });
 
-    testWidgets('Displays "Did you mean?" banner when user types a typo', (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: SearchScreen(),
-        ),
-      );
+    testWidgets('Displays "Did you mean?" banner when user types a typo', (
+      tester,
+    ) async {
+      await tester.pumpWidget(const MaterialApp(home: SearchScreen()));
       await tester.pumpAndSettle();
 
       // Enter typo "wankede"
@@ -340,12 +393,10 @@ void main() {
       expect(textField.controller?.text.toLowerCase(), contains('wankhede'));
     });
 
-    testWidgets('Displays sort strategy menu and changes sort order', (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: SearchScreen(),
-        ),
-      );
+    testWidgets('Displays sort strategy menu and changes sort order', (
+      tester,
+    ) async {
+      await tester.pumpWidget(const MaterialApp(home: SearchScreen()));
       await tester.pumpAndSettle();
 
       // Tap Sort button

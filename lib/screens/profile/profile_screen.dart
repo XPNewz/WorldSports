@@ -160,7 +160,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         body: SafeArea(
           child: Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 28),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -247,91 +247,98 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              'ATHLETE PASSPORT',
-                              style: GoogleFonts.outfit(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 0.8,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          BouncingTap(
-                            onTap: () => _showSpecializationSheet(context, user),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.tune_rounded, color: AppColors.primary, size: 12),
-                                  const SizedBox(width: 3),
-                                  Text(
-                                    'SPECS',
-                                    style: GoogleFonts.outfit(
-                                      color: AppColors.primary,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w900,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: totalMatches > 0
-                                  ? AppColors.gold.withValues(alpha: 0.12)
-                                  : const Color(0xFF64748B).withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: totalMatches > 0
-                                    ? AppColors.gold.withValues(alpha: 0.4)
-                                    : const Color(0xFF64748B).withValues(alpha: 0.3),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  totalMatches > 0
-                                      ? Icons.star_rounded
-                                      : Icons.shield_outlined,
-                                  color: totalMatches > 0
-                                      ? AppColors.gold
-                                      : const Color(0xFF64748B),
-                                  size: 12,
+                      Expanded(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary,
+                                  borderRadius: BorderRadius.circular(6),
                                 ),
-                                const SizedBox(width: 3),
-                                Text(
-                                  totalMatches > 0 ? '88 OVR • ELITE' : '0 OVR • ROOKIE',
+                                child: Text(
+                                  'ATHLETE PASSPORT',
                                   style: GoogleFonts.outfit(
-                                    color: totalMatches > 0
-                                        ? AppColors.gold
-                                        : const Color(0xFF475569),
+                                    color: Colors.white,
                                     fontSize: 10,
                                     fontWeight: FontWeight.w900,
+                                    letterSpacing: 0.8,
                                   ),
                                 ),
-                              ],
-                            ),
+                              ),
+                              const SizedBox(width: 6),
+                              BouncingTap(
+                                onTap: () => _showSpecializationSheet(context, user),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.tune_rounded, color: AppColors.primary, size: 12),
+                                      const SizedBox(width: 3),
+                                      Text(
+                                        'SPECS',
+                                        style: GoogleFonts.outfit(
+                                          color: AppColors.primary,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: totalMatches > 0
+                                      ? AppColors.gold.withValues(alpha: 0.12)
+                                      : const Color(0xFF64748B).withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: totalMatches > 0
+                                        ? AppColors.gold.withValues(alpha: 0.4)
+                                        : const Color(0xFF64748B).withValues(alpha: 0.3),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      totalMatches > 0
+                                          ? Icons.star_rounded
+                                          : Icons.shield_outlined,
+                                      color: totalMatches > 0
+                                          ? AppColors.gold
+                                          : const Color(0xFF64748B),
+                                      size: 12,
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      totalMatches > 0 ? '88 OVR • ELITE' : '0 OVR • ROOKIE',
+                                      style: GoogleFonts.outfit(
+                                        color: totalMatches > 0
+                                            ? AppColors.gold
+                                            : const Color(0xFF475569),
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
+                      const SizedBox(width: 8),
                       Row(
                         children: [
                           BouncingTap(

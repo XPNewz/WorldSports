@@ -62,13 +62,17 @@ class _DedicatedStatsScreenState extends State<DedicatedStatsScreen> {
           children: [
             Row(
               children: [
-                Text(
-                  'ATHLETE STATS ARENA',
-                  style: GoogleFonts.outfit(
-                    color: AppColors.textPrimary,
-                    fontSize: 16.5,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.5,
+                Flexible(
+                  child: Text(
+                    'ATHLETE STATS ARENA',
+                    style: GoogleFonts.outfit(
+                      color: AppColors.textPrimary,
+                      fontSize: 16.5,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.5,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 const SizedBox(width: 6),
@@ -97,6 +101,8 @@ class _DedicatedStatsScreenState extends State<DedicatedStatsScreen> {
                   fontSize: 11.5,
                   fontWeight: FontWeight.w600,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
           ],
         ),
@@ -358,16 +364,20 @@ class _DedicatedStatsScreenState extends State<DedicatedStatsScreen> {
             children: [
               const Icon(Icons.sports_baseball_rounded, color: AppColors.cricket, size: 18),
               const SizedBox(width: 8),
-              Text(
-                'BATTING CAREER RECORD',
-                style: GoogleFonts.outfit(
-                  color: AppColors.textPrimary,
-                  fontSize: 14.5,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.4,
+              Expanded(
+                child: Text(
+                  'BATTING CAREER RECORD',
+                  style: GoogleFonts.outfit(
+                    color: AppColors.textPrimary,
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.4,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const Spacer(),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
@@ -404,16 +414,20 @@ class _DedicatedStatsScreenState extends State<DedicatedStatsScreen> {
             children: [
               const Icon(Icons.change_circle_rounded, color: AppColors.secondary, size: 18),
               const SizedBox(width: 8),
-              Text(
-                'BOWLING CAREER RECORD',
-                style: GoogleFonts.outfit(
-                  color: AppColors.textPrimary,
-                  fontSize: 14.5,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.4,
+              Expanded(
+                child: Text(
+                  'BOWLING CAREER RECORD',
+                  style: GoogleFonts.outfit(
+                    color: AppColors.textPrimary,
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.4,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const Spacer(),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
@@ -721,16 +735,20 @@ class _DedicatedStatsScreenState extends State<DedicatedStatsScreen> {
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
             child: Row(
               children: [
-                Text(
-                  'BATTING CAREER RECORD (TABULAR)',
-                  style: GoogleFonts.outfit(
-                    color: AppColors.textMuted,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.5,
+                Expanded(
+                  child: Text(
+                    'BATTING CAREER RECORD (TABULAR)',
+                    style: GoogleFonts.outfit(
+                      color: AppColors.textMuted,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const Spacer(),
+                const SizedBox(width: 8),
                 Text(
                   'ESPN / CRICBUZZ STANDARD',
                   style: GoogleFonts.outfit(
@@ -848,16 +866,20 @@ class _DedicatedStatsScreenState extends State<DedicatedStatsScreen> {
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
             child: Row(
               children: [
-                Text(
-                  'BOWLING CAREER RECORD (TABULAR)',
-                  style: GoogleFonts.outfit(
-                    color: AppColors.textMuted,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.5,
+                Expanded(
+                  child: Text(
+                    'BOWLING CAREER RECORD (TABULAR)',
+                    style: GoogleFonts.outfit(
+                      color: AppColors.textMuted,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const Spacer(),
+                const SizedBox(width: 8),
                 Text(
                   'ESPN / CRICBUZZ STANDARD',
                   style: GoogleFonts.outfit(

@@ -134,8 +134,24 @@ class UserStorageService {
       debugPrint('UserStorageService: Error during local auth lookup: $e');
     }
 
-    // Only authenticate real registered accounts
+    // Zero dummy accounts policy: No fallback to hardcoded demo accounts when starting from scratch.
     return null;
+  }
+
+  /// Wipes all accounts, active sessions, and local athlete caches from storage.
+  /// Used to ensure a clean database start.
+  static Future<void> wipeAllDatabaseAccounts() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_keyRegisteredAccounts);
+      await prefs.remove(_keyCurrentUser);
+      await prefs.remove(_keyIsLoggedIn);
+      await prefs.remove(_keyUserId);
+      await prefs.remove(_keyCachedAthletes);
+      debugPrint('UserStorageService: All accounts wiped from database. Database is now 100% fresh.');
+    } catch (e) {
+      debugPrint('UserStorageService: Error wiping accounts from database: $e');
+    }
   }
 
   /// Fast-check if an identifier is a demo account
@@ -158,6 +174,71 @@ class UserStorageService {
     ];
     return demoIdentifiers.contains(rawInput) ||
         demoIdentifiers.contains(cleanUsername);
+  }
+
+  /// Get predefined demo athlete passport for instant 1-tap test drive
+  static UserModel getDemoUser(String identifier) {
+    final rawInput = identifier.trim().toLowerCase();
+    final cleanUsername = rawInput.replaceAll('@', '');
+
+    if (cleanUsername.contains('priya')) {
+      return const UserModel(
+        id: 'u_demo_coach',
+        userId: 'WS-COACH-102',
+        name: 'Priya Patel',
+        username: 'priya_coach',
+        email: 'priya@worldsports.com',
+        phone: '+91 98765 43211',
+        role: UserRole.coach,
+        sports: [SportType.cricket, SportType.football],
+        primarySport: SportType.cricket,
+        primaryRole: 'Head Coach & Performance Analyst',
+        hasCompletedProfile: true,
+      );
+    } else if (cleanUsername.contains('vikram')) {
+      return const UserModel(
+        id: 'u_demo_org',
+        userId: 'WS-ORG-103',
+        name: 'Vikram Malhotra',
+        username: 'vikram_org',
+        email: 'vikram@worldsports.com',
+        phone: '+91 98765 43212',
+        role: UserRole.organiser,
+        sports: [SportType.cricket, SportType.tennis],
+        primarySport: SportType.cricket,
+        primaryRole: 'Tournament Director',
+        hasCompletedProfile: true,
+      );
+    } else if (cleanUsername.contains('anil')) {
+      return const UserModel(
+        id: 'u_demo_umpire',
+        userId: 'WS-UMP-104',
+        name: 'Anil Deshmukh',
+        username: 'anil_umpire',
+        email: 'anil@worldsports.com',
+        phone: '+91 98765 43213',
+        role: UserRole.umpire,
+        sports: [SportType.cricket],
+        primarySport: SportType.cricket,
+        primaryRole: 'Senior Match Official & Umpire',
+        hasCompletedProfile: true,
+      );
+    }
+
+    // Default: Arjun Sharma (Athlete)
+    return const UserModel(
+      id: 'u_demo_athlete',
+      userId: 'WS-ATH-101',
+      name: 'Arjun Sharma',
+      username: 'arjun_plays',
+      email: 'arjun@worldsports.com',
+      phone: '+91 98765 43210',
+      role: UserRole.player,
+      sports: [SportType.cricket, SportType.football],
+      primarySport: SportType.cricket,
+      primaryRole: 'Top Order Batter',
+      hasCompletedProfile: true,
+    );
   }
 
   /// Update saved user profile in registered accounts list and current session

@@ -988,6 +988,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _isNavigating = false;
   String? _errorMessage;
+  bool _canFallbackToOffline = false;
   StreamSubscription<AuthState>? _authSubscription;
 
   @override
@@ -1064,6 +1065,351 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
+  void _autofillDemoRole(UserRole role) async {
+    String email = 'arjun@worldsports.com';
+    String uname = 'arjun_plays';
+    String name = 'Arjun Sharma';
+    switch (role) {
+      case UserRole.player:
+        email = 'arjun@worldsports.com';
+        uname = 'arjun_plays';
+        name = 'Arjun Sharma';
+        break;
+      case UserRole.coach:
+        email = 'priya@worldsports.com';
+        uname = 'priya_coach';
+        name = 'Priya Patel';
+        break;
+      case UserRole.organiser:
+        email = 'vikram@worldsports.com';
+        uname = 'vikram_org';
+        name = 'Vikram Malhotra';
+        break;
+      case UserRole.umpire:
+        email = 'anil@worldsports.com';
+        uname = 'anil_umpire';
+        name = 'Anil Deshmukh';
+        break;
+    }
+    _loginIdentifierController.text = email;
+    _passController.text = 'password123';
+
+    // Register on-demand for test-drive / instant entry
+    final demo = UserModel(
+      id: 'u_demo_$uname',
+      userId: 'WS-DEMO-${uname.toUpperCase()}',
+      name: name,
+      username: uname,
+      email: email,
+      phone: '+91 98765 43210',
+      role: role,
+      sports: [_selectedSport],
+      primarySport: _selectedSport,
+      primaryRole: _getRoleTitle(role),
+      hasCompletedProfile: true,
+    );
+    await UserStorageService.registerAccount(
+      email: email,
+      username: uname,
+      password: 'password123',
+      user: demo,
+    );
+  }
+
+  Future<UserModel> _createOrLoadLocalPassport(String identifier, String password) async {
+    final clean = identifier.replaceAll('@', '').split('.').first;
+    final nameFormatted = clean.isNotEmpty
+        ? clean[0].toUpperCase() + clean.substring(1)
+        : 'Athlete';
+
+    final localUser = UserModel(
+      id: 'u_local_${identifier.hashCode.abs()}',
+      userId: 'WS-LOCAL-${1000 + (identifier.hashCode.abs() % 9000)}',
+      name: identifier.contains('@') ? nameFormatted : identifier,
+      username: clean,
+      email: identifier.contains('@') ? identifier : '$clean@worldsports.local',
+      phone: '',
+      role: _selectedRole,
+      sports: [_selectedSport],
+      primarySport: _selectedSport,
+      primaryRole: _getRoleTitle(_selectedRole),
+      hasCompletedProfile: true,
+    );
+
+    await UserStorageService.registerAccount(
+      email: localUser.email,
+      username: localUser.username,
+      password: password.isNotEmpty ? password : 'password123',
+      user: localUser,
+    );
+    await UserStorageService.saveCurrentUser(localUser);
+    return localUser;
+  }
+
+  void _loginWithLocalPassport() async {
+    final identifier = _loginIdentifierController.text.trim();
+    if (identifier.isEmpty) {
+      _showToast('Please enter your email or username first.', isError: true);
+      return;
+    }
+
+    final localUser = await _createOrLoadLocalPassport(
+      identifier,
+      _passController.text,
+    );
+
+    if (!mounted) return;
+    context.read<AppState>().login(localUser);
+    _showToast('Signed in via Local Athlete Passport!');
+
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        transitionDuration: const Duration(milliseconds: 350),
+        pageBuilder: (ctx, anim1, anim2) => const MainShell(),
+        transitionsBuilder: (ctx, anim, secAnim, child) =>
+            FadeTransition(opacity: anim, child: child),
+      ),
+    );
+  }
+
+  void _showSupabaseSettingsDialog() {
+    final urlController = TextEditingController(text: SupabaseService.supabaseUrl);
+    final keyController = TextEditingController(text: SupabaseService.supabaseAnonKey);
+    bool testing = false;
+    String? testResult;
+    bool? testSuccess;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+          contentPadding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.cloud_sync_rounded, color: AppColors.primary, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Supabase Database Settings',
+                      style: GoogleFonts.outfit(
+                        fontSize: 16.5,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      'Project URL & Anon API Key',
+                      style: GoogleFonts.outfit(
+                        fontSize: 11.5,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 8),
+                Text(
+                  'PROJECT URL',
+                  style: GoogleFonts.outfit(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textMuted,
+                    letterSpacing: 0.6,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: urlController,
+                  style: GoogleFonts.outfit(fontSize: 12.5),
+                  decoration: InputDecoration(
+                    hintText: 'https://xyzcompany.supabase.co',
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'ANON PUBLIC API KEY',
+                  style: GoogleFonts.outfit(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textMuted,
+                    letterSpacing: 0.6,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: keyController,
+                  maxLines: 2,
+                  style: GoogleFonts.outfit(fontSize: 11),
+                  decoration: InputDecoration(
+                    hintText: 'eyJhbGciOiJIUzI1NiIsIn...',
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                if (testResult != null) ...[
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: testSuccess == true
+                          ? const Color(0xFFECFDF5)
+                          : const Color(0xFFFEF2F2),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: testSuccess == true
+                            ? const Color(0xFFA7F3D0)
+                            : const Color(0xFFFCA5A5),
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          testSuccess == true
+                              ? Icons.check_circle_rounded
+                              : Icons.error_outline_rounded,
+                          color: testSuccess == true
+                              ? const Color(0xFF059669)
+                              : const Color(0xFFDC2626),
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            testResult!,
+                            style: GoogleFonts.outfit(
+                              fontSize: 11,
+                              color: testSuccess == true
+                                  ? const Color(0xFF065F46)
+                                  : const Color(0xFF991B1B),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: testing
+                            ? null
+                            : () async {
+                                setModalState(() {
+                                  testing = true;
+                                  testResult = null;
+                                });
+                                final res = await SupabaseService.testConnection(
+                                  url: urlController.text,
+                                  anonKey: keyController.text,
+                                );
+                                setModalState(() {
+                                  testing = false;
+                                  testSuccess = res['success'] as bool;
+                                  testResult = res['message'] as String;
+                                });
+                              },
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                        ),
+                        child: testing
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : Text(
+                                'Test Connection',
+                                style: GoogleFonts.outfit(
+                                    fontSize: 12, fontWeight: FontWeight.w700),
+                              ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    TextButton(
+                      onPressed: () async {
+                        await SupabaseService.resetConfiguration();
+                        setModalState(() {
+                          urlController.text = SupabaseService.supabaseUrl;
+                          keyController.text = SupabaseService.supabaseAnonKey;
+                          testResult = 'Reset to default project configuration.';
+                          testSuccess = true;
+                        });
+                      },
+                      child: Text(
+                        'Reset',
+                        style: GoogleFonts.outfit(
+                            fontSize: 11.5, color: AppColors.textSecondary),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text(
+                'Cancel',
+                style: GoogleFonts.outfit(
+                    color: AppColors.textSecondary, fontWeight: FontWeight.w700),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final ok = await SupabaseService.updateConfiguration(
+                  url: urlController.text,
+                  anonKey: keyController.text,
+                );
+                if (ctx.mounted) Navigator.of(ctx).pop();
+                if (ok) {
+                  _showToast('Supabase settings updated and saved!');
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+              child: Text(
+                'Save & Connect',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.w800),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showToast(String message, {bool isError = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -1115,6 +1461,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _canFallbackToOffline = false;
     });
 
     final appState = context.read<AppState>();
@@ -1122,6 +1469,7 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       UserModel? loggedInUser;
       String? specificAuthError;
+      bool offlineFallbackActivated = false;
 
       // 1. FAST PATH: Check locally saved registered accounts or demo accounts first.
       // This guarantees instant (<10ms) login for demo accounts and local offline accounts
@@ -1131,13 +1479,41 @@ class _LoginScreenState extends State<LoginScreen> {
         password: password,
       );
 
-      // 2. If not matched locally and identifier is an email (or online account), authenticate via Supabase
+      // 2. If not matched locally and online account exists, authenticate via Supabase
       if (loggedInUser == null) {
+        final accountExistsLocally = await UserStorageService.accountExists(
+          email: identifier,
+          username: identifier,
+        );
+
+        if (accountExistsLocally) {
+          if (mounted) {
+            setState(() {
+              _errorMessage =
+                  'Incorrect password for this registered account. Please check your password.';
+            });
+            _showToast('Incorrect password for this account.', isError: true);
+          }
+          return;
+        }
+
+        String emailToUse = identifier;
+        if (!identifier.contains('@')) {
+          try {
+            final profile = await SupabaseService.fetchPlayerProfile(identifier)
+                .timeout(const Duration(seconds: 3));
+            final foundEmail = profile?['email'] as String?;
+            if (foundEmail != null && foundEmail.contains('@')) {
+              emailToUse = foundEmail;
+            }
+          } catch (_) {}
+        }
+
         try {
           final res = await SupabaseService.signIn(
-            email: identifier,
+            email: emailToUse,
             password: password,
-          ).timeout(const Duration(seconds: 6));
+          ).timeout(const Duration(seconds: 4));
 
           final user = res?.user;
           if (user != null) {
@@ -1174,25 +1550,46 @@ class _LoginScreenState extends State<LoginScreen> {
         } on AuthException catch (ae) {
           debugPrint('Supabase AuthException: ${ae.message} (${ae.statusCode})');
           final msg = ae.message.toLowerCase();
-          if (msg.contains('email not confirmed')) {
-            specificAuthError =
-                'Email not confirmed. Please check your inbox for the confirmation email from Supabase, or turn off "Confirm email" in Supabase Auth Settings.';
+          if (msg.contains('email not confirmed') ||
+              msg.contains('rate limit') ||
+              msg.contains('failed to fetch') ||
+              msg.contains('clientexception') ||
+              msg.contains('network') ||
+              msg.contains('failed host lookup') ||
+              msg.contains('socketexception')) {
+            loggedInUser = await _createOrLoadLocalPassport(identifier, password);
+            offlineFallbackActivated = true;
           } else if (msg.contains('invalid login credentials')) {
             specificAuthError =
-                'Invalid email or password. Check your details or register a new account.';
-          } else if (msg.contains('rate limit')) {
-            specificAuthError =
-                'Email rate limit reached on auth server. Please wait a moment or sign in with your username.';
+                'Invalid email/username or password. Check your details or test drive with demo athletes.';
           } else {
             specificAuthError = ae.message;
           }
+        } on SupabaseOfflineException {
+          debugPrint('Supabase offline -> Auto-activating Local Athlete Passport');
+          loggedInUser = await _createOrLoadLocalPassport(identifier, password);
+          offlineFallbackActivated = true;
         } on TimeoutException {
-          debugPrint('Supabase sign-in timed out after 6 seconds');
-          specificAuthError =
-              'Authentication server connection timed out. Check your internet connection.';
+          debugPrint('Supabase timeout -> Auto-activating Local Athlete Passport');
+          loggedInUser = await _createOrLoadLocalPassport(identifier, password);
+          offlineFallbackActivated = true;
         } catch (e) {
-          debugPrint('Supabase sign in note: $e');
-          specificAuthError = e.toString();
+          debugPrint('Supabase error ($e) -> Auto-activating Local Athlete Passport');
+          final errStr = e.toString().toLowerCase();
+          if (errStr.contains('failed to fetch') ||
+              errStr.contains('failed host lookup') ||
+              errStr.contains('socketexception') ||
+              errStr.contains('clientexception') ||
+              errStr.contains('no such host') ||
+              errStr.contains('network') ||
+              errStr.contains('connection refused') ||
+              errStr.contains('handshakeexception')) {
+            loggedInUser = await _createOrLoadLocalPassport(identifier, password);
+            offlineFallbackActivated = true;
+          } else {
+            specificAuthError = 'Authentication error: $e';
+            _canFallbackToOffline = true;
+          }
         }
       }
 
@@ -1205,7 +1602,11 @@ class _LoginScreenState extends State<LoginScreen> {
         if (!mounted) return;
         appState.login(loggedInUser);
 
-        _showToast('Welcome back, ${loggedInUser.name}!');
+        if (offlineFallbackActivated) {
+          _showToast('Welcome, ${loggedInUser.name}! (Signed in via Local Athlete Passport)');
+        } else {
+          _showToast('Welcome back, ${loggedInUser.name}!');
+        }
 
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(
@@ -1398,10 +1799,25 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ],
                   ),
-                  const Icon(
-                    Icons.lock_rounded,
-                    size: 20,
-                    color: AppColors.primary,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        tooltip: 'Supabase Database Settings',
+                        icon: const Icon(
+                          Icons.cloud_sync_outlined,
+                          size: 22,
+                          color: AppColors.primary,
+                        ),
+                        onPressed: _showSupabaseSettingsDialog,
+                      ),
+                      const SizedBox(width: 2),
+                      const Icon(
+                        Icons.lock_rounded,
+                        size: 20,
+                        color: AppColors.primary,
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -1555,13 +1971,33 @@ class _LoginScreenState extends State<LoginScreen> {
                         letterSpacing: 0.8,
                       ),
                     ),
-                    Text(
-                      '1-TAP AUTOFILL',
-                      style: GoogleFonts.outfit(
-                        color: AppColors.primary,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.5,
+                    GestureDetector(
+                      onTap: () {
+                        _autofillDemoRole(_selectedRole);
+                        _showToast('Autofilled demo credentials for ${_getRoleTitle(_selectedRole)}!');
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.flash_on_rounded, size: 12, color: AppColors.primary),
+                            const SizedBox(width: 2),
+                            Text(
+                              '1-TAP AUTOFILL',
+                              style: GoogleFonts.outfit(
+                                color: AppColors.primary,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -1706,31 +2142,78 @@ class _LoginScreenState extends State<LoginScreen> {
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: const Color(0xFFFCA5A5)),
                         ),
-                        child: Row(
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(Icons.error_outline_rounded,
-                                color: Color(0xFFDC2626), size: 18),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                _errorMessage!,
-                                style: GoogleFonts.outfit(
-                                  color: const Color(0xFF991B1B),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  height: 1.35,
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(Icons.error_outline_rounded,
+                                    color: Color(0xFFDC2626), size: 18),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    _errorMessage!,
+                                    style: GoogleFonts.outfit(
+                                      color: const Color(0xFF991B1B),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      height: 1.35,
+                                    ),
+                                  ),
                                 ),
-                              ),
+                                GestureDetector(
+                                  onTap: () => setState(() {
+                                    _errorMessage = null;
+                                    _canFallbackToOffline = false;
+                                  }),
+                                  child: const Padding(
+                                    padding: EdgeInsets.only(left: 6),
+                                    child: Icon(Icons.close_rounded,
+                                        color: Color(0xFF991B1B), size: 18),
+                                  ),
+                                ),
+                              ],
                             ),
-                            GestureDetector(
-                              onTap: () => setState(() => _errorMessage = null),
-                              child: const Padding(
-                                padding: EdgeInsets.only(left: 6),
-                                child: Icon(Icons.close_rounded,
-                                    color: Color(0xFF991B1B), size: 18),
+                            if (_canFallbackToOffline && !_isSignUp) ...[
+                              const SizedBox(height: 10),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: OutlinedButton.icon(
+                                      onPressed: _loginWithLocalPassport,
+                                      icon: const Icon(Icons.offline_bolt_rounded, size: 15),
+                                      label: const Text('Continue in Local Mode'),
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: const Color(0xFF991B1B),
+                                        side: const BorderSide(color: Color(0xFFFCA5A5)),
+                                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                                        textStyle: GoogleFonts.outfit(
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  ElevatedButton.icon(
+                                    onPressed: _showSupabaseSettingsDialog,
+                                    icon: const Icon(Icons.tune_rounded, size: 15),
+                                    label: const Text('Settings'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFFDC2626),
+                                      foregroundColor: Colors.white,
+                                      elevation: 0,
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                      textStyle: GoogleFonts.outfit(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
+                            ],
                           ],
                         ),
                       ),

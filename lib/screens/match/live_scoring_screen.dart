@@ -3101,14 +3101,15 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
           ),
 
           // Executive TabBar (All 6 Tabs)
-          Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              border: Border(
-                bottom: BorderSide(color: Color(0xFFE2E8F0)),
+          Material(
+            color: Colors.white,
+            child: Container(
+              decoration: const BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(color: Color(0xFFE2E8F0)),
+                ),
               ),
-            ),
-            child: TabBar(
+              child: TabBar(
               controller: _tabController,
               isScrollable: true,
               tabAlignment: TabAlignment.start,
@@ -3128,6 +3129,7 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
               ],
             ),
           ),
+        ),
 
           // The 6 Tab Views
           Expanded(
@@ -3163,45 +3165,58 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
       child: Column(
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 7,
-                    height: 7,
-                    decoration: BoxDecoration(
-                      color: _isMatchAbandoned ? const Color(0xFFEF4444) : const Color(0xFFE11D48),
-                      shape: BoxShape.circle,
+              Expanded(
+                flex: 5,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(
+                        color: _isMatchAbandoned ? const Color(0xFFEF4444) : const Color(0xFFE11D48),
+                        shape: BoxShape.circle,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 5),
-                  Text(
-                    _isMatchAbandoned ? 'ABANDONED' : 'LIVE',
-                    style: GoogleFonts.outfit(
-                      color: _isMatchAbandoned ? const Color(0xFFEF4444) : const Color(0xFFE11D48),
-                      fontWeight: FontWeight.w900,
-                      fontSize: 11,
-                      letterSpacing: 0.8,
+                    const SizedBox(width: 5),
+                    Text(
+                      _isMatchAbandoned ? 'ABANDONED' : 'LIVE',
+                      style: GoogleFonts.outfit(
+                        color: _isMatchAbandoned ? const Color(0xFFEF4444) : const Color(0xFFE11D48),
+                        fontWeight: FontWeight.w900,
+                        fontSize: 11,
+                        letterSpacing: 0.8,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    _isMatchAbandoned && _abandonReason != null ? _abandonReason! : _match.format,
-                    style: GoogleFonts.outfit(
-                      color: AppColors.textSecondary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _isMatchAbandoned && _abandonReason != null ? _abandonReason! : _match.format,
+                        style: GoogleFonts.outfit(
+                          color: AppColors.textSecondary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-              Text(
-                _match.venue.isNotEmpty ? _match.venue : 'Arena Pitch',
-                style: GoogleFonts.outfit(
-                  color: AppColors.textSecondary,
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w600,
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 4,
+                child: Text(
+                  _match.venue.isNotEmpty ? _match.venue : 'Arena Pitch',
+                  textAlign: TextAlign.end,
+                  style: GoogleFonts.outfit(
+                    color: AppColors.textSecondary,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -3381,37 +3396,73 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.sports_cricket_rounded, size: 16, color: Color(0xFF059669)),
-                          const SizedBox(width: 6),
-                          Text('${_striker.name} *', style: GoogleFonts.outfit(fontWeight: FontWeight.w800, fontSize: 13)),
-                        ],
+                      Expanded(
+                        child: Row(
+                          children: [
+                            const Icon(Icons.sports_cricket_rounded, size: 16, color: Color(0xFF059669)),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                '${_striker.name} *',
+                                style: GoogleFonts.outfit(fontWeight: FontWeight.w800, fontSize: 13),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      Text('$_strikerRuns ($_strikerBalls b) • SR ${_strikerBalls > 0 ? ((_strikerRuns / _strikerBalls) * 100).toStringAsFixed(1) : "0.0"}',
-                          style: GoogleFonts.outfit(fontWeight: FontWeight.w800, fontSize: 13)),
+                      const SizedBox(width: 8),
+                      Text(
+                        '$_strikerRuns ($_strikerBalls b) • SR ${_strikerBalls > 0 ? ((_strikerRuns / _strikerBalls) * 100).toStringAsFixed(1) : "0.0"}',
+                        style: GoogleFonts.outfit(fontWeight: FontWeight.w800, fontSize: 13),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 6),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('  ${_nonStriker.name}', style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 12.5)),
-                      Text('$_nonStrikerRuns ($_nonStrikerBalls b)', style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 12.5)),
+                      Expanded(
+                        child: Text(
+                          '  ${_nonStriker.name}',
+                          style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 12.5),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '$_nonStrikerRuns ($_nonStrikerBalls b)',
+                        style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 12.5),
+                      ),
                     ],
                   ),
                   const Divider(height: 18),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.sports_handball_rounded, size: 15, color: Color(0xFF64748B)),
-                          const SizedBox(width: 6),
-                          Text(_currentBowler.name, style: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 12.5)),
-                        ],
+                      Expanded(
+                        child: Row(
+                          children: [
+                            const Icon(Icons.sports_handball_rounded, size: 15, color: Color(0xFF64748B)),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                _currentBowler.name,
+                                style: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 12.5),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      Text('$_bowlerWickets/$_bowlerRuns (${_bowlerBalls ~/ 6}.${_bowlerBalls % 6} ov)', style: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 12.5)),
+                      const SizedBox(width: 8),
+                      Text(
+                        '$_bowlerWickets/$_bowlerRuns (${_bowlerBalls ~/ 6}.${_bowlerBalls % 6} ov)',
+                        style: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 12.5),
+                      ),
                     ],
                   ),
                 ],
@@ -3499,9 +3550,28 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> with SingleTicker
   Widget _buildMetaRow(String label, String value) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Text(label, style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 12.5)),
-        Text(value, style: GoogleFonts.outfit(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 12.5)),
+        Flexible(
+          flex: 4,
+          child: Text(
+            label,
+            style: GoogleFonts.outfit(color: AppColors.textSecondary, fontSize: 12.5),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Flexible(
+          flex: 6,
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: GoogleFonts.outfit(color: AppColors.textPrimary, fontWeight: FontWeight.w700, fontSize: 12.5),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
       ],
     );
   }

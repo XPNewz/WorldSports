@@ -31,6 +31,14 @@ class AppState extends ChangeNotifier {
   Future<void> loadPersistedState() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+
+      // Clean database start: ensure all old stored accounts/sessions are purged if starting from scratch
+      const cleanDatabaseFlag = 'ws_database_clean_start_fresh';
+      if (!(prefs.getBool(cleanDatabaseFlag) ?? false)) {
+        await UserStorageService.wipeAllDatabaseAccounts();
+        await prefs.setBool(cleanDatabaseFlag, true);
+      }
+
       _hasSeenOnboarding = prefs.getBool('has_seen_onboarding') ?? false;
       final savedLoggedIn = prefs.getBool('is_logged_in') ?? false;
       if (savedLoggedIn) {
@@ -1325,17 +1333,11 @@ class AppState extends ChangeNotifier {
 
   SportType? get selectedSport => _activeSportFilter;
 
-  List<FeedPost> _feedPosts = [];
+  final List<FeedPost> _feedPosts = [];
 
-  List<FeedPost> get feedPosts {
-    if (_feedPosts.isEmpty) {
-      _feedPosts = List.from(MockData.feedPosts);
-    }
-    return _feedPosts;
-  }
+  List<FeedPost> get feedPosts => _feedPosts;
 
   void togglePostLike(String postId) {
-    if (_feedPosts.isEmpty) _feedPosts = List.from(MockData.feedPosts);
     final idx = _feedPosts.indexWhere((p) => p.id == postId);
     if (idx != -1) {
       final post = _feedPosts[idx];
@@ -1350,7 +1352,6 @@ class AppState extends ChangeNotifier {
   }
 
   void togglePostRepost(String postId) {
-    if (_feedPosts.isEmpty) _feedPosts = List.from(MockData.feedPosts);
     final idx = _feedPosts.indexWhere((p) => p.id == postId);
     if (idx != -1) {
       final post = _feedPosts[idx];
@@ -1365,7 +1366,6 @@ class AppState extends ChangeNotifier {
   }
 
   void togglePostBookmark(String postId) {
-    if (_feedPosts.isEmpty) _feedPosts = List.from(MockData.feedPosts);
     final idx = _feedPosts.indexWhere((p) => p.id == postId);
     if (idx != -1) {
       final post = _feedPosts[idx];
@@ -1375,7 +1375,6 @@ class AppState extends ChangeNotifier {
   }
 
   void incrementPostComments(String postId) {
-    if (_feedPosts.isEmpty) _feedPosts = List.from(MockData.feedPosts);
     final idx = _feedPosts.indexWhere((p) => p.id == postId);
     if (idx != -1) {
       _feedPosts[idx].comments++;

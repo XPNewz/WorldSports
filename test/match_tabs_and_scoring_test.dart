@@ -35,6 +35,15 @@ void main() {
     dateTime: DateTime(2026, 10, 14),
     venue: 'Wankhede Arena',
     creatorId: 'u001',
+    scoreData: const {
+      'innings1': {
+        'runs': 45,
+        'wickets': 0,
+        'balls': 30,
+        'overs': '5.0',
+      },
+      'overs_limit': 20,
+    },
     team1Players: const [
       MatchPlayer(id: 'c1', name: 'Rohit Sharma', jerseyNumber: 45, role: 'Opening Batsman', isCaptain: true),
       MatchPlayer(id: 'c2', name: 'Virat Kohli', jerseyNumber: 18, role: 'Top-Order Batsman'),
@@ -97,6 +106,11 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
+      if (find.text('Confirm Selected Openers').evaluate().isNotEmpty) {
+        await tester.tap(find.text('Confirm Selected Openers'));
+        await tester.pumpAndSettle();
+      }
+
       // Check Creator Scorer indicator badge in AppBar
       expect(find.text('SCORER'), findsOneWidget);
 
@@ -157,6 +171,11 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
+      if (find.text('Confirm Selected Openers').evaluate().isNotEmpty) {
+        await tester.tap(find.text('Confirm Selected Openers'));
+        await tester.pumpAndSettle();
+      }
+
       // Navigate to Scoreboard tab
       await tester.tap(find.text('Scoreboard'));
       await tester.pumpAndSettle();
@@ -169,6 +188,7 @@ void main() {
 
       final confirmBtn = find.textContaining('Confirm +');
       if (confirmBtn.evaluate().isNotEmpty) {
+        await tester.ensureVisible(confirmBtn.first);
         await tester.tap(confirmBtn.first);
         await tester.pumpAndSettle();
       }

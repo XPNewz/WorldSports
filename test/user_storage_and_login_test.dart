@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:worldsports/core/models/models.dart';
+import 'package:worldsports/core/services/supabase_service.dart';
 import 'package:worldsports/core/services/user_storage_service.dart';
 import 'package:worldsports/core/state/app_state.dart';
 import 'package:worldsports/screens/auth/auth_screen.dart';
@@ -111,13 +112,64 @@ void main() {
       expect(failPassword, isNull);
     });
 
-    test('Authenticates demo accounts as local fallback', () async {
-      final demo = await UserStorageService.authenticateLocal(
-        emailOrUsername: 'arjun@worldsports.com',
+    test('Wipes all accounts from database for clean start', () async {
+      // 1. Initial wipe ensures no accounts exist
+      await UserStorageService.wipeAllDatabaseAccounts();
+      final noUser = await UserStorageService.authenticateLocal(
+        emailOrUsername: 'unregistered@worldsports.com',
         password: 'password',
       );
-      expect(demo, isNotNull);
-      expect(demo!.name, equals(MockData.demoPlayer.name));
+      expect(noUser, isNull);
+
+      // 2. Register fresh account from scratch
+      const freshUser = UserModel(
+        id: 'u_fresh_1',
+        userId: 'WS-FRESH-001',
+        name: 'Fresh Athlete',
+        username: 'fresh_athlete',
+        email: 'fresh@worldsports.com',
+        role: UserRole.player,
+        sports: [SportType.cricket],
+        primarySport: SportType.cricket,
+        primaryRole: 'Top Order Batter',
+      );
+      await UserStorageService.registerAccount(
+        email: 'fresh@worldsports.com',
+        username: 'fresh_athlete',
+        password: 'password123',
+        user: freshUser,
+      );
+
+      final loggedIn = await UserStorageService.authenticateLocal(
+        emailOrUsername: 'fresh@worldsports.com',
+        password: 'password123',
+      );
+      expect(loggedIn, isNotNull);
+      expect(loggedIn!.name, equals('Fresh Athlete'));
+
+      // 3. Wiping database clears all accounts again
+      await UserStorageService.wipeAllDatabaseAccounts();
+      final afterWipe = await UserStorageService.authenticateLocal(
+        emailOrUsername: 'fresh@worldsports.com',
+        password: 'password123',
+      );
+      expect(afterWipe, isNull);
+    });
+
+    test('SupabaseService configuration can be updated and reset', () async {
+      const customUrl = 'https://custom-project-id.supabase.co';
+      const customKey = 'custom-anon-key-12345';
+
+      final updated = await SupabaseService.updateConfiguration(
+        url: customUrl,
+        anonKey: customKey,
+      );
+      expect(updated, isTrue);
+      expect(SupabaseService.supabaseUrl, equals(customUrl));
+      expect(SupabaseService.supabaseAnonKey, equals(customKey));
+
+      await SupabaseService.resetConfiguration();
+      expect(SupabaseService.supabaseUrl, equals(SupabaseService.defaultSupabaseUrl));
     });
   });
 
@@ -184,6 +236,53 @@ void main() {
       // Switch prompt at bottom
       expect(find.text('Already have an account? '), findsOneWidget);
       expect(find.text('Log In to Arena'), findsOneWidget);
+    });
+
+    testWidgets('Tapping 1-TAP AUTOFILL populates athlete credentials and allows instant entry', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final appState = AppState();
+      await tester.pumpWidget(createTestableAuthWidget(appState));
+      await tester.pumpAndSettle();
+
+      // Tap 1-TAP AUTOFILL
+      await tester.tap(find.text('1-TAP AUTOFILL'));
+      await tester.pumpAndSettle();
+
+      // Verify autofilled credentials
+      expect(find.text('arjun@worldsports.com'), findsOneWidget);
+
+      // Tap ENTER THE ARENA to login
+      await tester.tap(find.text('ENTER THE ARENA'));
+      await tester.pumpAndSettle();
+
+      // Verified logged in
+      expect(appState.isLoggedIn, isTrue);
+      expect(appState.currentUser?.name, equals(MockData.demoPlayer.name));
+    });
+
+    testWidgets('Tapping Supabase cloud settings icon opens configuration modal', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final appState = AppState();
+      await tester.pumpWidget(createTestableAuthWidget(appState));
+      await tester.pumpAndSettle();
+
+      // Tap cloud settings icon
+      await tester.tap(find.byIcon(Icons.cloud_sync_outlined));
+      await tester.pumpAndSettle();
+
+      // Verify dialog is visible
+      expect(find.text('Supabase Database Settings'), findsOneWidget);
+      expect(find.text('PROJECT URL'), findsOneWidget);
+      expect(find.text('Test Connection'), findsOneWidget);
+      expect(find.text('Save & Connect'), findsOneWidget);
     });
   });
 }

@@ -498,44 +498,96 @@ class HomeScreen extends StatelessWidget {
                   title: 'Sports Wire & Live Feed',
                   accentColor: AppColors.primary,
                   icon: Icons.dynamic_feed_rounded,
-                  actionLabel: 'Latest Posts',
+                  actionLabel: appState.feedPosts.isEmpty ? null : 'Latest Posts',
                   onAction: () {},
                 ),
               ),
             ),
 
-            SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, i) {
-                  final feedPosts = appState.feedPosts;
-                  final promotedAds = AdService.getPromotedPosts(sport: appState.selectedSport);
+            if (appState.feedPosts.isEmpty)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.bolt_rounded, color: AppColors.primary, size: 22),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Sports Wire • Coming Soon',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF0F172A),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Official match milestones, scorecards, and league announcements will appear here dynamically.',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 11,
+                                  color: const Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              )
+            else
+              SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, i) {
+                    final feedPosts = appState.feedPosts;
+                    final promotedAds = AdService.getPromotedPosts(sport: appState.selectedSport);
 
-                  // Interleave promoted ad at index 1 and index 4 (if available)
-                  if (i == 1 && promotedAds.isNotEmpty) {
-                    return _TwitterPromotedAdPost(ad: promotedAds[0]);
-                  }
-                  if (i == 4 && promotedAds.length > 1) {
-                    return _TwitterPromotedAdPost(ad: promotedAds[1]);
-                  }
+                    // Interleave promoted ad at index 1 and index 4 (if available)
+                    if (i == 1 && promotedAds.isNotEmpty) {
+                      return _TwitterPromotedAdPost(ad: promotedAds[0]);
+                    }
+                    if (i == 4 && promotedAds.length > 1) {
+                      return _TwitterPromotedAdPost(ad: promotedAds[1]);
+                    }
 
-                  // Calculate actual post index
-                  int postIdx = i;
-                  if (i > 4 && promotedAds.length > 1) {
-                    postIdx -= 2;
-                  } else if (i > 1 && promotedAds.isNotEmpty) {
-                    postIdx -= 1;
-                  }
+                    // Calculate actual post index
+                    int postIdx = i;
+                    if (i > 4 && promotedAds.length > 1) {
+                      postIdx -= 2;
+                    } else if (i > 1 && promotedAds.isNotEmpty) {
+                      postIdx -= 1;
+                    }
 
-                  if (postIdx >= 0 && postIdx < feedPosts.length) {
-                    return _TwitterSportsTweetCard(post: feedPosts[postIdx]);
-                  }
-                  return const SizedBox.shrink();
-                },
-                childCount: appState.feedPosts.length +
-                    (AdService.getPromotedPosts(sport: appState.selectedSport).isNotEmpty ? 1 : 0) +
-                    (AdService.getPromotedPosts(sport: appState.selectedSport).length > 1 ? 1 : 0),
+                    if (postIdx >= 0 && postIdx < feedPosts.length) {
+                      return _TwitterSportsTweetCard(post: feedPosts[postIdx]);
+                    }
+                    return const SizedBox.shrink();
+                  },
+                  childCount: appState.feedPosts.length +
+                      (AdService.getPromotedPosts(sport: appState.selectedSport).isNotEmpty ? 1 : 0) +
+                      (AdService.getPromotedPosts(sport: appState.selectedSport).length > 1 ? 1 : 0),
+                ),
               ),
-            ),
 
             // Upcoming Fixtures Section
             SliverToBoxAdapter(
@@ -1054,16 +1106,20 @@ class _FeaturedLightArenaCard extends StatelessWidget {
                 children: [
                   const Icon(Icons.flash_on_rounded, color: Colors.white, size: 16),
                   const SizedBox(width: 6),
-                  Text(
-                    'MATCH OF THE DAY • ${match.sport.name.toUpperCase()}',
-                    style: GoogleFonts.outfit(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0.8,
+                  Expanded(
+                    child: Text(
+                      'MATCH OF THE DAY • ${match.sport.name.toUpperCase()}',
+                      style: GoogleFonts.outfit(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.8,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 8),
                   const LiveIndicator(label: 'LIVE'),
                 ],
               ),
@@ -1606,32 +1662,39 @@ class _ModernSportsBannerAd extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.verified, color: Colors.amber, size: 12),
-                          const SizedBox(width: 4),
-                          Text(
-                            'OFFICIAL ARENA PARTNER',
-                            style: GoogleFonts.outfit(
-                              color: Colors.amber,
-                              fontSize: 9.5,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 0.8,
+                    Flexible(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.verified, color: Colors.amber, size: 12),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                'OFFICIAL ARENA PARTNER',
+                                style: GoogleFonts.outfit(
+                                  color: Colors.amber,
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 0.8,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                    const Spacer(),
-                    if (ad.discountTag != null)
+                    if (ad.discountTag != null) ...[
+                      const SizedBox(width: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
@@ -1648,6 +1711,7 @@ class _ModernSportsBannerAd extends StatelessWidget {
                           ),
                         ),
                       ),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -1673,30 +1737,38 @@ class _ModernSportsBannerAd extends StatelessWidget {
                 ),
                 const SizedBox(height: 14),
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${ad.rating}',
-                          style: GoogleFonts.outfit(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w900,
+                    Flexible(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${ad.rating}',
+                            style: GoogleFonts.outfit(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w900,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '(${ad.reviewsCount}+ athletes)',
-                          style: GoogleFonts.outfit(
-                            color: Colors.white.withValues(alpha: 0.65),
-                            fontSize: 11,
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              '(${ad.reviewsCount}+ athletes)',
+                              style: GoogleFonts.outfit(
+                                color: Colors.white.withValues(alpha: 0.65),
+                                fontSize: 11,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                    const Spacer(),
+                    const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                       decoration: BoxDecoration(
@@ -1787,6 +1859,7 @@ class _TwitterSportsTweetCard extends StatelessWidget {
                       Row(
                         children: [
                           Flexible(
+                            flex: 3,
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -1813,14 +1886,17 @@ class _TwitterSportsTweetCard extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 4),
-                          Text(
-                            post.authorHandle,
-                            style: GoogleFonts.outfit(
-                              color: AppColors.textMuted,
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w500,
+                          Flexible(
+                            flex: 2,
+                            child: Text(
+                              post.authorHandle,
+                              style: GoogleFonts.outfit(
+                                color: AppColors.textMuted,
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(width: 4),
                           Text(

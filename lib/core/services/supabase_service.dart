@@ -1,15 +1,40 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/models.dart';
 
+class SupabaseOfflineException implements Exception {
+  final String message;
+  const SupabaseOfflineException([this.message = 'Cloud database is currently unreachable.']);
+  @override
+  String toString() => message;
+}
+
 class SupabaseService {
-  // Supabase Configuration
-  static const String supabaseUrl = 'https://ofqzfplizvyxlcndzamr.supabase.co';
-  static const String supabaseAnonKey =
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mcXpmcGxpenZ5eGxjbmR6YW1yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0MTI4MDYsImV4cCI6MjEwNzk4ODgwNn0.ceFrpl_sOyP0nVjF8SwlMARZj01ygZYmMGKs6U2Ae04';
+  // Supabase Configuration with compile-time or runtime override support
+  static const String defaultSupabaseUrl = String.fromEnvironment(
+    'SUPABASE_URL',
+    defaultValue: 'https://ofqzfplizvyxlcndzamr.supabase.co',
+  );
+  static const String defaultSupabaseAnonKey = String.fromEnvironment(
+    'SUPABASE_ANON_KEY',
+    defaultValue:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mcXpmcGxpenZ5eGxjbmR6YW1yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI0MTI4MDYsImV4cCI6MjEwNzk4ODgwNn0.ceFrpl_sOyP0nVjF8SwlMARZj01ygZYmMGKs6U2Ae04',
+  );
+
+  static const String _prefKeyCustomUrl = 'custom_supabase_url';
+  static const String _prefKeyCustomAnonKey = 'custom_supabase_anon_key';
+
+  static String _activeUrl = defaultSupabaseUrl;
+  static String _activeAnonKey = defaultSupabaseAnonKey;
+  static SupabaseClient? _customClient;
+
+  static String get supabaseUrl => _activeUrl;
+  static String get supabaseAnonKey => _activeAnonKey;
 
   static SupabaseClient? get clientOrNull {
+    if (_customClient != null) return _customClient;
     try {
       return Supabase.instance.client;
     } catch (_) {
@@ -17,17 +42,117 @@ class SupabaseService {
     }
   }
 
-  static SupabaseClient get client => Supabase.instance.client;
+  static SupabaseClient get client => _customClient ?? Supabase.instance.client;
 
   /// Initialize Supabase
   static Future<void> initialize() async {
-    await Supabase.initialize(
-      url: supabaseUrl,
-      publishableKey: supabaseAnonKey,
-      authOptions: const FlutterAuthClientOptions(
-        authFlowType: AuthFlowType.pkce,
-      ),
-    );
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedUrl = prefs.getString(_prefKeyCustomUrl);
+      final savedKey = prefs.getString(_prefKeyCustomAnonKey);
+      if (savedUrl != null && savedUrl.trim().isNotEmpty) {
+        _activeUrl = savedUrl.trim();
+      }
+      if (savedKey != null && savedKey.trim().isNotEmpty) {
+        _activeAnonKey = savedKey.trim();
+      }
+    } catch (_) {}
+
+    try {
+      await Supabase.initialize(
+        url: _activeUrl,
+        publishableKey: _activeAnonKey,
+        authOptions: const FlutterAuthClientOptions(
+          authFlowType: AuthFlowType.pkce,
+        ),
+      );
+    } catch (e) {
+      debugPrint('Supabase initialize note: $e');
+    }
+  }
+
+  /// Update Supabase project configuration dynamically at runtime
+  static Future<bool> updateConfiguration({
+    required String url,
+    required String anonKey,
+  }) async {
+    final cleanUrl = url.trim();
+    final cleanKey = anonKey.trim();
+    if (cleanUrl.isEmpty || cleanKey.isEmpty) return false;
+
+    try {
+      _activeUrl = cleanUrl;
+      _activeAnonKey = cleanKey;
+      _customClient = SupabaseClient(cleanUrl, cleanKey);
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_prefKeyCustomUrl, cleanUrl);
+      await prefs.setString(_prefKeyCustomAnonKey, cleanKey);
+      return true;
+    } catch (e) {
+      debugPrint('Supabase updateConfiguration error: $e');
+      return false;
+    }
+  }
+
+  /// Reset Supabase configuration back to the default project
+  static Future<void> resetConfiguration() async {
+    _activeUrl = defaultSupabaseUrl;
+    _activeAnonKey = defaultSupabaseAnonKey;
+    _customClient = null;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_prefKeyCustomUrl);
+      await prefs.remove(_prefKeyCustomAnonKey);
+    } catch (_) {}
+  }
+
+  /// Test live connectivity to Supabase project
+  static Future<Map<String, dynamic>> testConnection({
+    String? url,
+    String? anonKey,
+  }) async {
+    final targetUrl = (url ?? _activeUrl).trim();
+    final targetKey = (anonKey ?? _activeAnonKey).trim();
+
+    try {
+      final testClient = SupabaseClient(targetUrl, targetKey);
+      final res = await testClient
+          .from('profiles')
+          .select('id')
+          .limit(1)
+          .timeout(const Duration(seconds: 4));
+      return {
+        'success': true,
+        'message': 'Connected to Supabase successfully! (HTTP 200 reachable)',
+        'count': res.length,
+      };
+    } on TimeoutException {
+      return {
+        'success': false,
+        'message':
+            'Connection timed out after 4 seconds. Check your network or verify if the Supabase project is active.',
+        'isHostError': true,
+      };
+    } catch (e) {
+      final err = e.toString().toLowerCase();
+      if (err.contains('failed host lookup') ||
+          err.contains('socketexception') ||
+          err.contains('no such host') ||
+          err.contains('clientexception')) {
+        return {
+          'success': false,
+          'message':
+              'Host lookup failed for "$targetUrl". The Supabase project is likely paused or deleted on Supabase, or your device is offline.',
+          'isHostError': true,
+        };
+      }
+      return {
+        'success': false,
+        'message': 'Supabase response: $e',
+        'isHostError': false,
+      };
+    }
   }
 
   // ─── 1. SIGN UP (Captures full athlete passport) ───────────────────────────
@@ -109,10 +234,27 @@ class SupabaseService {
   }) async {
     final c = clientOrNull;
     if (c == null) return null;
-    return await c.auth.signInWithPassword(
-      email: email.trim(),
-      password: password,
-    );
+    try {
+      return await c.auth.signInWithPassword(
+        email: email.trim(),
+        password: password,
+      );
+    } catch (e) {
+      final err = e.toString().toLowerCase();
+      if (err.contains('failed to fetch') ||
+          err.contains('failed host lookup') ||
+          err.contains('socketexception') ||
+          err.contains('clientexception') ||
+          err.contains('network') ||
+          err.contains('no such host') ||
+          err.contains('connection refused')) {
+        debugPrint('SupabaseService.signIn: Network error -> $e');
+        throw SupabaseOfflineException(
+          'Cloud database is currently unreachable ($supabaseUrl).',
+        );
+      }
+      rethrow;
+    }
   }
 
   // ─── 3. GOOGLE SIGN-IN ─────────────────────────────────────────────────────

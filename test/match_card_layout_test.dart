@@ -47,6 +47,28 @@ void main() {
 
     testWidgets('HomeScreen renders match cards showing full team names in column way', (tester) async {
       final appState = AppState();
+      final testMatch = MatchModel(
+        id: 'test_m1',
+        sport: SportType.cricket,
+        team1Id: 't1',
+        team2Id: 't2',
+        team1Name: 'Mumbai Mavericks',
+        team2Name: 'Delhi Dynamos',
+        team1Short: 'MUM',
+        team2Short: 'DEL',
+        dateTime: DateTime.now(),
+        venue: 'Wankhede Arena',
+        creatorId: 'u001',
+        status: MatchStatus.live,
+        scoreData: const {
+          'team1_score': '187/4',
+          'team1_overs': '20.0',
+          'team2_score': '165/8',
+          'team2_overs': '18.4',
+          'status_text': 'MUM won by 22 runs',
+        },
+      );
+      appState.addMatch(testMatch);
 
       await tester.pumpWidget(
         ChangeNotifierProvider<AppState>.value(
